@@ -3,7 +3,7 @@ from datetime import datetime
 from abc import ABCMeta, abstractmethod
 import mlflow.pyfunc
 
-class BaseModel(mlflow.pyfunc.PythonModel, metaclass=ABCMeta):
+class BaseModel(metaclass=ABCMeta):
     """
     Base class for models
 
