@@ -1,9 +1,9 @@
 import pickle as pickle
 from datetime import datetime
 from abc import ABCMeta, abstractmethod
+import mlflow.pyfunc
 
-
-class BaseModel(metaclass=ABCMeta):
+class BaseModel(mlflow.pyfunc.PythonModel, metaclass=ABCMeta):
     """
     Base class for models
 
@@ -60,6 +60,15 @@ class BaseModel(metaclass=ABCMeta):
         model.__dict__ = serialize_dict
 
         return model
+
+
+class MLFlowWrapper(mlflow.pyfunc.PythonModel):
+
+    def __init__(self, model):
+        self.model = model
+
+    def predict(self, context, model_input):
+        return self.model.predict(model_input)
 
 
 class BaseTransformer(metaclass=ABCMeta):

@@ -3,7 +3,9 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from mlmodels import BaseModel
+from mlmodels import BaseModel, MLFlowWrapper
+import mlflow.pyfunc
+
 
 ###########################################################################################
 # Create model class
@@ -56,13 +58,26 @@ if __name__ == '__main__':
     test_y = test["quality"]
 
     # Fit model, make predictions and evaluate
-    lr = RandomForestRegressorModel(features=train_x.columns)
-    lr.fit(train_x, train_y)
+    model = RandomForestRegressorModel(features=train_x.columns)
+    model.fit(train_x, train_y)
 
-    predicted_qualities = lr.predict(test_x)
+    predicted_qualities = model.predict(test_x)
+    print(predicted_qualities)
 
     (rmse, mae, r2) = eval_metrics(test_y, predicted_qualities)
 
     print("  RMSE: %s" % rmse)
     print("  MAE: %s" % mae)
     print("  R2: %s" % r2)
+
+    model.save(fname='model_dump.pickle')
+
+    model_mlflow = MLFlowWrapper(model)
+
+    mlflow.pyfunc.save_model(path='model_mlflow_dump.pickle', python_model=model_mlflow)
+
+    # Load the model in `python_function` format
+    loaded_model = mlflow.pyfunc.load_model('/model_mlflow_dump.pickle')
+
+    predicted_qualities_with_mlflow_model = loaded_model.predict(test_x)
+    print(predicted_qualities_with_mlflow_model)
