@@ -48,6 +48,7 @@ if __name__ == '__main__':
     # The predicted column is "quality" which is a scalar from [3, 9]
     train_x = train.drop(["quality"], axis=1)
     test_x = test.drop(["quality"], axis=1)
+    test_x.alcohol = test_x.alcohol.astype('int32')
     train_y = train["quality"]
     test_y = test["quality"]
 
