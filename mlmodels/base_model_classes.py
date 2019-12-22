@@ -19,6 +19,16 @@ class BaseModel(metaclass=ABCMeta):
     def MODEL_NAME(self):
         pass
 
+    # @property
+    # @abstractmethod
+    # def input_schema(self):
+    #     raise
+    #
+    # @property
+    # @abstractmethod
+    # def output_schema(self):
+    #     raise
+
     @abstractmethod
     def fit(self):
         pass

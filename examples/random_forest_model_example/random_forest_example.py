@@ -19,20 +19,22 @@ def eval_metrics(actual, pred):
 
 if __name__ == '__main__':
 
-    file_path = os.path.dirname(os.path.abspath(__file__))
+    #file_path = os.path.dirname(os.path.abspath(__file__))
+    dir_path = os.path.dirname(os.path.realpath(__file__))
 
-    model_path = 'model_mlflow'
-    code_path = 'model_class.py'
-    conda_env_path = 'conda.yaml'
+    code_path = str(dir_path / Path('model_class.py'))
+    model_path = str(dir_path / Path('model'))
+    conda_env_path = str(dir_path / Path('conda.yaml'))
 
     load_dotenv(find_dotenv())
 
-#    mlflow.set_tracking_uri(
-#        'http://{user}:{psw}@ec2-3-124-68-213.eu-central-1.compute.amazonaws.com'.format(
-#            user=os.environ.get("MLFLOW_USER"),
-#            psw=os.environ.get("MLFLOW_PASSWORD"),
-#        )
-#    )
+    mlflow.set_tracking_uri(
+       'http://{user}:{psw}@{server}'.format(
+           server=os.environ.get("MLFLOW_SERVER_URL"),
+           user=os.environ.get("MLFLOW_USER"),
+           psw=os.environ.get("MLFLOW_PASSWORD"),
+       )
+    )
 
     mlflow.set_experiment('test')
 
