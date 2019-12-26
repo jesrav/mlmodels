@@ -56,10 +56,11 @@ if __name__ == '__main__':
     print("  R2: %s" % r2)
 
     schema = model.get_model_input_schema()
+    #data = test_x.drop('volatile acidity', axis=1).sample(5).to_dict(orient='records')
     data = test_x.sample(5).to_dict(orient='records')
     data = {'data': data}
-    print(schema.load(data))
-
     json_data = json.dumps(data)
-    # print(json_data)
     print(model.predict(model.json_to_model_input(json_data)))
+
+    from pprint import pprint
+    pprint(model.get_api_spec().to_yaml())

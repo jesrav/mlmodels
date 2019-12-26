@@ -2,6 +2,9 @@ from mlmodels import BaseModel
 from sklearn.ensemble import RandomForestRegressor
 from marshmallow_dataframe import RecordsDataFrameSchema
 import json
+from apispec import APISpec
+from apispec.ext.marshmallow import MarshmallowPlugin
+from apispec_webframeworks.flask import FlaskPlugin
 
 class RandomForestRegressorModel(BaseModel):
     MODEL_NAME = 'Random forest model'
@@ -35,9 +38,37 @@ class RandomForestRegressorModel(BaseModel):
             """Automatically generated schema for model input dataframe"""
             class Meta:
                 dtypes = self.input_dtypes
-        return ModelInputSchema()
+        return ModelInputSchema
 
     def json_to_model_input(self, json_data):
         json_data = json.loads(json_data)
-        model_input_schema = self.get_model_input_schema()
+        model_input_schema = self.get_model_input_schema()()
         return model_input_schema.load(json_data)
+
+    def get_api_spec(self):
+        # Create an APISpec
+        spec = APISpec(
+            title="Prediction open api spec",
+            version="1.0.0",
+            openapi_version="3.0.2",
+            plugins=[MarshmallowPlugin()],
+        )
+        ModelInputSchema = self.get_model_input_schema()
+        spec.components.schema("predict", schema=ModelInputSchema)
+        # spec.path(
+        #     path="/predict",
+        #     operations=dict(
+        #         get=dict(
+        #             responses={"200": {"content": {"application/json": {"schema": "predict"}}}}
+        #         )
+        #     ),
+        # )
+        spec.path(
+            path="/predict/",
+            operations=dict(
+                get=dict(
+                    responses={"200": {"content": {"application/json": {"schema": "ModelInputSchema"}}}}
+                )
+            ),
+        )
+        return spec
