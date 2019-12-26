@@ -60,7 +60,9 @@ if __name__ == '__main__':
     data = test_x.sample(5).to_dict(orient='records')
     data = {'data': data}
     json_data = json.dumps(data)
+
     print(model.predict(model.json_to_model_input(json_data)))
 
     from pprint import pprint
-    pprint(model.get_api_spec().to_yaml())
+    pprint(json_data)
+    #pprint(model.get_api_spec().to_yaml())

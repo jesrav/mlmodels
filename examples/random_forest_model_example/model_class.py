@@ -55,14 +55,6 @@ class RandomForestRegressorModel(BaseModel):
         )
         ModelInputSchema = self.get_model_input_schema()
         spec.components.schema("predict", schema=ModelInputSchema)
-        # spec.path(
-        #     path="/predict",
-        #     operations=dict(
-        #         get=dict(
-        #             responses={"200": {"content": {"application/json": {"schema": "predict"}}}}
-        #         )
-        #     ),
-        # )
         spec.path(
             path="/predict/",
             operations=dict(
