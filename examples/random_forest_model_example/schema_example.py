@@ -7,7 +7,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from mlmodels import MLFlowWrapper
 from model_class import RandomForestRegressorModel
-import mlflow
 import json
 
 def eval_metrics(actual, pred):
@@ -55,14 +54,9 @@ if __name__ == '__main__':
     print("  MAE: %s" % mae)
     print("  R2: %s" % r2)
 
-    schema = model.get_model_input_schema()
-    #data = test_x.drop('volatile acidity', axis=1).sample(5).to_dict(orient='records')
-    data = test_x.sample(5).to_dict(orient='records')
-    data = {'data': data}
-    json_data = json.dumps(data)
-
-    print(model.predict(model.json_to_model_input(json_data)))
-
     from pprint import pprint
-    pprint(json_data)
-    #pprint(model.get_api_spec().to_yaml())
+    with open('test.yaml', 'w') as f:
+        f.write(model.get_open_api_yaml())
+    pprint(model.get_open_api_yaml())
+    print(model.feature_dtypes)
+    print(model.target_dtype)

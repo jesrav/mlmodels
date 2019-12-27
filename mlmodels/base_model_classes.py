@@ -3,6 +3,7 @@ from datetime import datetime
 from abc import ABCMeta, abstractmethod
 import mlflow.pyfunc
 
+
 class BaseModel(metaclass=ABCMeta):
     """
     Base class for models
@@ -18,16 +19,6 @@ class BaseModel(metaclass=ABCMeta):
     @abstractmethod
     def MODEL_NAME(self):
         pass
-
-    # @property
-    # @abstractmethod
-    # def input_schema(self):
-    #     raise
-    #
-    # @property
-    # @abstractmethod
-    # def output_schema(self):
-    #     raise
 
     @abstractmethod
     def fit(self):
