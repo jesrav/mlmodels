@@ -1,1 +1,4 @@
 /mlmodels.egg-info
+/dist
+/build
+.env
