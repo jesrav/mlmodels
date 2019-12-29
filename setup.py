@@ -16,6 +16,6 @@ setup(
         'apispec',
         'jinja2',
         'PyYAML',
-        'marshmallow_dataframe'
+        'marshmallow-dataframe'
     ],
 )
