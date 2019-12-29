@@ -7,5 +7,15 @@ setup(
     description='Base model and transformer classes.',
     author='Jes Ravnbøl',
     license='',
-    install_requires=['scikit-learn', 'pandas', 'numpy', 'mlflow', 'apispec', 'jinja2', 'PyYAML'],
+    install_requires=[
+        'gorilla',
+        'mlflow',
+        'simplejson',
+        'scikit-learn',
+        'pandas',
+        'apispec',
+        'jinja2',
+        'PyYAML',
+        'marshmallow_dataframe'
+    ],
 )
