@@ -1,8 +1,12 @@
 import pickle as pickle
 from datetime import datetime
 from abc import ABCMeta, abstractmethod
+import numpy as np
+from marshmallow_dataframe import RecordsDataFrameSchema
+from apispec import APISpec
+from apispec.ext.marshmallow import MarshmallowPlugin
 import mlflow.pyfunc
-
+from mlmodels.openapi_yaml_template import open_api_yaml_specification, open_api_dict_specification
 
 class BaseModel(metaclass=ABCMeta):
     """
@@ -62,6 +66,79 @@ class BaseModel(metaclass=ABCMeta):
 
         return model
 
+
+class DataFrameModel(BaseModel, metaclass=ABCMeta):
+
+    MODEL_NAME = 'Random forest model'
+
+    def __init__(
+            self,
+            features=None,
+            feature_dtypes=None,
+            target_dtype=None,
+    ):
+        super().__init__()
+        self.model_initiated_dt = datetime.utcnow()
+        self.features = features
+        self.feature_dtypes = feature_dtypes
+        self.target_dtype = target_dtype
+
+    ACCEPTED_DTYPES = (
+        np.dtype('int64'),
+        np.dtype('int32'),
+        np.dtype('float64'),
+        np.dtype('float32'),
+        np.dtype('O'),
+    )
+
+    TARGET_TO_JSON_TYPE_MAP = {
+        np.dtype('int64'): {'type': 'number', 'format': 'integer'},
+        np.dtype('int32'): {'type': 'number', 'format': 'integer'},
+        np.dtype('float64'): {'type': 'number', 'format': 'float'},
+        np.dtype('float32'): {'type': 'number', 'format': 'float'},
+        np.dtype('O'): {'type': 'string'},
+    }
+
+    def get_model_input_schema(self):
+        class ModelInputSchema(RecordsDataFrameSchema):
+            """Automatically generated schema for model input dataframe"""
+
+            class Meta:
+                dtypes = self.feature_dtypes
+
+        return ModelInputSchema
+
+    def record_dict_to_model_input(self, dict_data):
+        model_input_schema = self.get_model_input_schema()()
+        return model_input_schema.load(dict_data)
+
+    def record_field_schema(self):
+        # Create an APISpec
+        spec = APISpec(
+            title="Prediction open api spec",
+            version="1.0.0",
+            openapi_version="3.0.2",
+            plugins=[MarshmallowPlugin()],
+        )
+        ModelInputSchema = self.get_model_input_schema()
+        spec.components.schema("predict", schema=ModelInputSchema)
+        spec_dict = spec.to_dict()
+        record_field_schema = spec_dict['components']['schemas']['Record']['properties']
+        return record_field_schema
+
+    def open_api_yaml(self):
+        record_field_schema = self.record_field_schema()
+        return open_api_yaml_specification(
+            feature_dict=record_field_schema,
+            target_dict=self.TARGET_TO_JSON_TYPE_MAP[self.target_dtype]
+        )
+
+    def open_api_dict(self):
+        record_field_schema = self.record_field_schema()
+        return open_api_dict_specification(
+            feature_dict=record_field_schema,
+            target_dict=self.TARGET_TO_JSON_TYPE_MAP[self.target_dtype]
+        )
 
 class MLFlowWrapper(mlflow.pyfunc.PythonModel):
 

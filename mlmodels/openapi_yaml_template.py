@@ -1,4 +1,5 @@
 from jinja2 import Template
+import yaml
 
 template_str = """
 tags:
@@ -53,3 +54,7 @@ definitions:
 def open_api_yaml_specification(feature_dict, target_dict):
     t = Template(template_str)
     return t.render(feature_dict=feature_dict, target_dict=target_dict)
+
+
+def open_api_dict_specification(feature_dict, target_dict):
+    return yaml.load(open_api_yaml_specification(feature_dict, target_dict))

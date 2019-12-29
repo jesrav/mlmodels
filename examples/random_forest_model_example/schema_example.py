@@ -56,7 +56,5 @@ if __name__ == '__main__':
 
     from pprint import pprint
     with open('test.yaml', 'w') as f:
-        f.write(model.get_open_api_yaml())
-    pprint(model.get_open_api_yaml())
-    print(model.feature_dtypes)
-    print(model.target_dtype)
+        f.write(model.open_api_yaml())
+    pprint(model.open_api_dict())
