@@ -37,14 +37,16 @@ definitions:
       required:
       - data
       type: object
+  
   predictions:
       properties:
         predictions:
           items:
             format: {{target_dict['format']}}
             nullable: False
-            type: {{target_dict['format']}}
-      type: array
+            type: {{target_dict['type']}}
+          type: array
+        type: object  
 """
 
 
