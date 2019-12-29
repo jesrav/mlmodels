@@ -1,12 +1,15 @@
 import pickle as pickle
 from datetime import datetime
 from abc import ABCMeta, abstractmethod
+from functools import wraps
 import numpy as np
+import pandas as pd
 from marshmallow_dataframe import RecordsDataFrameSchema
 from apispec import APISpec
 from apispec.ext.marshmallow import MarshmallowPlugin
 import mlflow.pyfunc
 from mlmodels.openapi_yaml_template import open_api_yaml_specification, open_api_dict_specification
+
 
 class BaseModel(metaclass=ABCMeta):
     """
@@ -67,9 +70,36 @@ class BaseModel(metaclass=ABCMeta):
         return model
 
 
-class DataFrameModel(BaseModel, metaclass=ABCMeta):
+def infer_dataframe_dtypes_from_fit(func):
 
-    MODEL_NAME = 'Random forest model'
+    @wraps(func)
+    def wrapper(*args):
+        self_var = args[0]
+        X = args[1]
+        y = args[2]
+
+        assert isinstance(X, pd.DataFrame), 'X must be a DataFrame'
+        if self_var.features is None:
+            raise ValueError("features attribute must be set. It should be a list of features")
+
+        if self_var.feature_dtypes is None:
+            if all(X[self_var.features].dtypes.isin(self_var.ACCEPTED_DTYPES)):
+                self_var.feature_dtypes = X[self_var.features].dtypes
+            else:
+                raise ValueError(f"Dtypes of columns of X must be in {self_var.ACCEPTED_DTYPES}]")
+
+        if self_var.target_dtype is None:
+            if y.dtypes in self_var.ACCEPTED_DTYPES:
+                self_var.target_dtype = y.dtypes
+            else:
+                raise ValueError(f"Dtype of y must be in {self_var.ACCEPTED_DTYPES}]")
+
+        func(*args)
+
+    return wrapper
+
+
+class DataFrameModel(BaseModel, metaclass=ABCMeta):
 
     def __init__(
             self,
@@ -82,6 +112,12 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
         self.features = features
         self.feature_dtypes = feature_dtypes
         self.target_dtype = target_dtype
+
+    @property
+    @classmethod
+    @abstractmethod
+    def MODEL_NAME(self):
+        pass
 
     ACCEPTED_DTYPES = (
         np.dtype('int64'),
@@ -99,13 +135,26 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
         np.dtype('O'): {'type': 'string'},
     }
 
+    def infer_feature_dataframe_dtypes(self, X):
+        assert isinstance(X, pd.DataFrame), 'X must be a DataFrame'
+        if self.feature_dtypes is None:
+            if all(X[self.features].dtypes.isin(self.ACCEPTED_DTYPES)):
+                self.feature_dtypes = X[self.features].dtypes
+            else:
+                raise ValueError(f"Dtypes of columns of X must be in {self.ACCEPTED_DTYPES}]")
+
+    def infer_target_dtypes(self, y):
+        if self.target_dtype is None:
+            if y.dtypes in self.ACCEPTED_DTYPES:
+                self.target_dtype = y.dtypes
+            else:
+                raise ValueError(f"Dtype of y must be in {self.ACCEPTED_DTYPES}]")
+
     def get_model_input_schema(self):
         class ModelInputSchema(RecordsDataFrameSchema):
             """Automatically generated schema for model input dataframe"""
-
             class Meta:
                 dtypes = self.feature_dtypes
-
         return ModelInputSchema
 
     def record_dict_to_model_input(self, dict_data):
@@ -113,15 +162,14 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
         return model_input_schema.load(dict_data)
 
     def record_field_schema(self):
-        # Create an APISpec
         spec = APISpec(
             title="Prediction open api spec",
             version="1.0.0",
             openapi_version="3.0.2",
             plugins=[MarshmallowPlugin()],
         )
-        ModelInputSchema = self.get_model_input_schema()
-        spec.components.schema("predict", schema=ModelInputSchema)
+        model_input_schema_class = self.get_model_input_schema()
+        spec.components.schema("predict", schema=model_input_schema_class)
         spec_dict = spec.to_dict()
         record_field_schema = spec_dict['components']['schemas']['Record']['properties']
         return record_field_schema
@@ -139,6 +187,7 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
             feature_dict=record_field_schema,
             target_dict=self.TARGET_TO_JSON_TYPE_MAP[self.target_dtype]
         )
+
 
 class MLFlowWrapper(mlflow.pyfunc.PythonModel):
 

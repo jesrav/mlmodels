@@ -5,9 +5,7 @@ from dotenv import load_dotenv, find_dotenv
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from mlmodels import MLFlowWrapper
 from model_class import RandomForestRegressorModel
-import json
 
 def eval_metrics(actual, pred):
     rmse = np.sqrt(mean_squared_error(actual, pred))

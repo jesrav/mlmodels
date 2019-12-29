@@ -19,7 +19,6 @@ def eval_metrics(actual, pred):
 
 if __name__ == '__main__':
 
-    #file_path = os.path.dirname(os.path.abspath(__file__))
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     code_path = str(dir_path / Path('model_class.py'))
@@ -48,7 +47,6 @@ if __name__ == '__main__':
     # The predicted column is "quality" which is a scalar from [3, 9]
     train_x = train.drop(["quality"], axis=1)
     test_x = test.drop(["quality"], axis=1)
-    test_x.alcohol = test_x.alcohol.astype('int32')
     train_y = train["quality"]
     test_y = test["quality"]
 
@@ -76,4 +74,16 @@ if __name__ == '__main__':
         model_mlflow = MLFlowWrapper(model)
 
         # log model
-        mlflow.pyfunc.log_model(model_path, code_path=[code_path], python_model=model_mlflow)
+        #mlflow.pyfunc.log_model(model_path, code_path=[code_path], python_model=model_mlflow)
+
+        print(dir(model_mlflow))
+        print(dir(model_mlflow.model))
+        mlflow.pyfunc.save_model(
+            path=str(model_path),
+            python_model=model_mlflow,
+            code_path=[code_path])
+
+        loaded_model = mlflow.pyfunc.load_model(str(model_path))
+
+        print(dir(loaded_model))
+        print(dir(loaded_model.model))
