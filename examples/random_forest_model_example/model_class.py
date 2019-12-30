@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
-from mlmodels import DataFrameModel, infer_dataframe_dtypes_from_fit
+from mlmodels import DataFrameModel, infer_dataframe_dtypes_from_fit, infer_dataframe_features_from_fit
 
 
 class RandomForestRegressorModel(DataFrameModel):
@@ -16,6 +16,7 @@ class RandomForestRegressorModel(DataFrameModel):
         self.random_forest_params = random_forest_params
         self.model = RandomForestRegressor(**random_forest_params)
 
+    @infer_dataframe_features_from_fit
     @infer_dataframe_dtypes_from_fit
     def fit(self, X, y):
         self.model.fit(X[self.features], y)

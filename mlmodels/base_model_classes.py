@@ -98,6 +98,20 @@ def infer_dataframe_dtypes_from_fit(func):
 
     return wrapper
 
+def infer_dataframe_features_from_fit(func):
+
+    @wraps(func)
+    def wrapper(*args):
+        self_var = args[0]
+        X = args[1]
+
+        assert isinstance(X, pd.DataFrame), 'X must be a DataFrame'
+        if self_var.features is None:
+            self_var.features = list(X.columns)
+
+        func(*args)
+
+    return wrapper
 
 class DataFrameModel(BaseModel, metaclass=ABCMeta):
 
