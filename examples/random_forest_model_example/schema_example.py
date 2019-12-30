@@ -10,7 +10,7 @@ from model_class import RandomForestRegressorModel
 def eval_metrics(actual, pred):
     rmse = np.sqrt(mean_squared_error(actual, pred))
     mae = mean_absolute_error(actual, pred)
-    return rmse, mae, r2
+    return rmse, mae
 
 
 if __name__ == '__main__':
@@ -52,4 +52,4 @@ if __name__ == '__main__':
     print("  MAE: %s" % mae)
 
     from pprint import pprint
-    pprint(model.open_api_dict())
+    pprint(model.get_open_api_dict())

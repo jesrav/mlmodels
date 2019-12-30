@@ -12,7 +12,7 @@ from model_class import RandomForestRegressorModel
 def eval_metrics(actual, pred):
     rmse = np.sqrt(mean_squared_error(actual, pred))
     mae = mean_absolute_error(actual, pred)
-    return rmse, mae, r2
+    return rmse, mae
 
 
 if __name__ == '__main__':

@@ -13,7 +13,7 @@ import mlflow
 def eval_metrics(actual, pred):
     rmse = np.sqrt(mean_squared_error(actual, pred))
     mae = mean_absolute_error(actual, pred)
-    return rmse, mae, r2
+    return rmse, mae
 
 
 if __name__ == '__main__':
@@ -26,13 +26,14 @@ if __name__ == '__main__':
 
     load_dotenv(find_dotenv())
 
-    mlflow.set_tracking_uri(
-       'http://{user}:{psw}@{server}'.format(
-           server=os.environ.get("MLFLOW_SERVER_URL"),
-           user=os.environ.get("MLFLOW_USER"),
-           psw=os.environ.get("MLFLOW_PASSWORD"),
-       )
-    )
+    if os.environ.get("MLFLOW_SERVER_URL"):
+        mlflow.set_tracking_uri(
+           'http://{user}:{psw}@{server}'.format(
+               server=os.environ.get("MLFLOW_SERVER_URL"),
+               user=os.environ.get("MLFLOW_USER"),
+               psw=os.environ.get("MLFLOW_PASSWORD"),
+           )
+        )
 
     mlflow.set_experiment('test_experiment')
 
