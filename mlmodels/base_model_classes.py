@@ -149,21 +149,6 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
         np.dtype('O'): {'type': 'string'},
     }
 
-    def infer_feature_dataframe_dtypes(self, X):
-        assert isinstance(X, pd.DataFrame), 'X must be a DataFrame'
-        if self.feature_dtypes is None:
-            if all(X[self.features].dtypes.isin(self.ACCEPTED_DTYPES)):
-                self.feature_dtypes = X[self.features].dtypes
-            else:
-                raise ValueError(f"Dtypes of columns of X must be in {self.ACCEPTED_DTYPES}]")
-
-    def infer_target_dtypes(self, y):
-        if self.target_dtype is None:
-            if y.dtypes in self.ACCEPTED_DTYPES:
-                self.target_dtype = y.dtypes
-            else:
-                raise ValueError(f"Dtype of y must be in {self.ACCEPTED_DTYPES}]")
-
     def get_model_input_schema(self):
         class ModelInputSchema(RecordsDataFrameSchema):
             """Automatically generated schema for model input dataframe"""
@@ -175,7 +160,7 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
         model_input_schema = self.get_model_input_schema()()
         return model_input_schema.load(dict_data)
 
-    def record_field_schema(self):
+    def get_record_field_schema(self):
         spec = APISpec(
             title="Prediction open api spec",
             version="1.0.0",
@@ -188,15 +173,15 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
         record_field_schema = spec_dict['components']['schemas']['Record']['properties']
         return record_field_schema
 
-    def open_api_yaml(self):
-        record_field_schema = self.record_field_schema()
+    def get_open_api_yaml(self):
+        record_field_schema = self.get_record_field_schema()
         return open_api_yaml_specification(
             feature_dict=record_field_schema,
             target_dict=self.TARGET_TO_JSON_TYPE_MAP[self.target_dtype]
         )
 
-    def open_api_dict(self):
-        record_field_schema = self.record_field_schema()
+    def get_open_api_dict(self):
+        record_field_schema = self.get_record_field_schema()
         return open_api_dict_specification(
             feature_dict=record_field_schema,
             target_dict=self.TARGET_TO_JSON_TYPE_MAP[self.target_dtype]
