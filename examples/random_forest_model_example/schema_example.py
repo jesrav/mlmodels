@@ -10,7 +10,6 @@ from model_class import RandomForestRegressorModel
 def eval_metrics(actual, pred):
     rmse = np.sqrt(mean_squared_error(actual, pred))
     mae = mean_absolute_error(actual, pred)
-    r2 = r2_score(actual, pred)
     return rmse, mae, r2
 
 
@@ -47,13 +46,10 @@ if __name__ == '__main__':
 
     predicted_qualities = model.predict(test_x)
 
-    (rmse, mae, r2) = eval_metrics(test_y, predicted_qualities)
+    (rmse, mae) = eval_metrics(test_y, predicted_qualities)
 
     print("  RMSE: %s" % rmse)
     print("  MAE: %s" % mae)
-    print("  R2: %s" % r2)
 
     from pprint import pprint
-    with open('test.yaml', 'w') as f:
-        f.write(model.open_api_yaml())
     pprint(model.open_api_dict())
