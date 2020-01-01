@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from mlmodels import MLFlowWrapper
 from model_class import RandomForestRegressorModel
-import mlflow
+import mlflow.pyfunc
 
 
 def eval_metrics(actual, pred):
@@ -72,9 +72,11 @@ if __name__ == '__main__':
         model_mlflow = MLFlowWrapper(model)
 
         # log model
-        mlflow.pyfunc.log_model(model_path, code_path=[code_path], python_model=model_mlflow)
+        mlflow.pyfunc.log_model(code_path=[code_path], python_model=model_mlflow, conda_env=conda_env_path)
 
         # mlflow.pyfunc.save_model(
-        #     path=str(model_path),
+        #     path=model_path,
         #     python_model=model_mlflow,
-        #     code_path=[code_path])
+        #     code_path=[code_path],
+        #     conda_env=conda_env_path
+        # )

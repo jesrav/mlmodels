@@ -1,4 +1,4 @@
-name: random-forest
+name: custom-model-env
 channels:
   - conda-forge
 dependencies:
@@ -7,3 +7,4 @@ dependencies:
 - pip:
   - mlflow
   - cloudpickle==1.2.1
+  - git+https://github.com/jesrav/mlmodels#egg=mlmodels
