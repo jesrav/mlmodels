@@ -70,49 +70,6 @@ class BaseModel(metaclass=ABCMeta):
         return model
 
 
-def infer_dataframe_dtypes_from_fit(func):
-
-    @wraps(func)
-    def wrapper(*args):
-        self_var = args[0]
-        X = args[1]
-        y = args[2]
-
-        assert isinstance(X, pd.DataFrame), 'X must be a DataFrame'
-        if self_var.features is None:
-            raise ValueError("features attribute must be set. It should be a list of features")
-
-        if self_var.feature_dtypes is None:
-            if all(X[self_var.features].dtypes.isin(self_var.ACCEPTED_DTYPES)):
-                self_var.feature_dtypes = X[self_var.features].dtypes
-            else:
-                raise ValueError(f"Dtypes of columns of X must be in {self_var.ACCEPTED_DTYPES}]")
-
-        if self_var.target_dtype is None:
-            if y.dtypes in self_var.ACCEPTED_DTYPES:
-                self_var.target_dtype = y.dtypes
-            else:
-                raise ValueError(f"Dtype of y must be in {self_var.ACCEPTED_DTYPES}]")
-
-        func(*args)
-
-    return wrapper
-
-def infer_dataframe_features_from_fit(func):
-
-    @wraps(func)
-    def wrapper(*args):
-        self_var = args[0]
-        X = args[1]
-
-        assert isinstance(X, pd.DataFrame), 'X must be a DataFrame'
-        if self_var.features is None:
-            self_var.features = list(X.columns)
-
-        func(*args)
-
-    return wrapper
-
 class DataFrameModel(BaseModel, metaclass=ABCMeta):
 
     def __init__(
@@ -122,16 +79,9 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
             target_dtype=None,
     ):
         super().__init__()
-        self.model_initiated_dt = datetime.utcnow()
         self.features = features
         self.feature_dtypes = feature_dtypes
         self.target_dtype = target_dtype
-
-    @property
-    @classmethod
-    @abstractmethod
-    def MODEL_NAME(self):
-        pass
 
     ACCEPTED_DTYPES = (
         np.dtype('int64'),
@@ -186,6 +136,61 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
             feature_dict=record_field_schema,
             target_dict=self.TARGET_TO_JSON_TYPE_MAP[self.target_dtype]
         )
+
+
+def infer_dataframe_dtypes_from_fit(func):
+
+    @wraps(func)
+    def wrapper(*args):
+        self_var = args[0]
+        X = args[1]
+        y = args[2]
+
+        if isinstance(self_var, DataFrameModel) is False:
+            raise ValueError(
+                "The decorator only works on fit methods for objects of type DataFrameModel."
+            )
+
+        assert isinstance(X, pd.DataFrame), 'X must be a DataFrame'
+        if self_var.features is None:
+            raise ValueError("features attribute must be set. It should be a list of features")
+
+        if self_var.feature_dtypes is None:
+            if all(X[self_var.features].dtypes.isin(self_var.ACCEPTED_DTYPES)):
+                self_var.feature_dtypes = X[self_var.features].dtypes
+            else:
+                raise ValueError(f"Dtypes of columns of X must be in {self_var.ACCEPTED_DTYPES}]")
+
+        if self_var.target_dtype is None:
+            if y.dtypes in self_var.ACCEPTED_DTYPES:
+                self_var.target_dtype = y.dtypes
+            else:
+                raise ValueError(f"Dtype of y must be in {self_var.ACCEPTED_DTYPES}]")
+
+        func(*args)
+
+    return wrapper
+
+
+def infer_dataframe_features_from_fit(func):
+
+    @wraps(func)
+    def wrapper(*args):
+        self_var = args[0]
+        X = args[1]
+
+        if isinstance(self_var, DataFrameModel) is False:
+            raise ValueError(
+                "The decorator only works on fit methods for objects of type DataFrameModel."
+            )
+
+        assert isinstance(X, pd.DataFrame), 'X must be a DataFrame'
+        if self_var.features is None:
+            self_var.features = list(X.columns)
+
+        func(*args)
+
+    return wrapper
 
 
 class MLFlowWrapper(mlflow.pyfunc.PythonModel):
