@@ -1,10 +1,10 @@
-name: custom-model-env
 channels:
-  - conda-forge
+- conda-forge
 dependencies:
-- python=3.7.3
-- scikit-learn=0.21.2
+- python=3.8
+- scikit-learn
 - pip:
   - mlflow
-  - cloudpickle==1.2.1
+  - cloudpickle
   - git+https://github.com/jesrav/mlmodels#egg=mlmodels
+name: custom-model-env

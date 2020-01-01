@@ -72,11 +72,11 @@ if __name__ == '__main__':
         model_mlflow = MLFlowWrapper(model)
 
         # log model
-        mlflow.pyfunc.log_model(code_path=[code_path], python_model=model_mlflow, conda_env=conda_env_path)
+        mlflow.pyfunc.log_model(artifact_path='model/', code_path=[code_path], python_model=model_mlflow, conda_env=conda_env_path)
 
-        # mlflow.pyfunc.save_model(
-        #     path=model_path,
-        #     python_model=model_mlflow,
-        #     code_path=[code_path],
-        #     conda_env=conda_env_path
-        # )
+        mlflow.pyfunc.save_model(
+            path=model_path,
+            python_model=model_mlflow,
+            code_path=[code_path],
+            conda_env=conda_env_path
+        )
