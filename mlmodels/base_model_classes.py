@@ -11,6 +11,9 @@ import mlflow.pyfunc
 from mlmodels.openapi_yaml_template import open_api_yaml_specification, open_api_dict_specification
 
 
+########################################################################################################
+# Basemodel classes
+########################################################################################################
 class BaseModel(metaclass=ABCMeta):
     """
     Base class for models
@@ -71,7 +74,15 @@ class BaseModel(metaclass=ABCMeta):
 
 
 class DataFrameModel(BaseModel, metaclass=ABCMeta):
+    """
+    Base class for data frame models
 
+    The class inherits from BaseModelClass, but has the fit and predict methods should work on pandas data frames and
+    series. Features and dtypes should either be set on initialization or infered using the decorators
+    infer_dataframe_dtypes_from_fit and infer_dataframe_features_from_fit.
+    Having the dtypes allows us to validate the model input using the decorator validate_prediction_input
+    and get the open api schema with get_open_api_yaml or get_open_api_dict.
+    """
     def __init__(
             self,
             features=None,
@@ -138,6 +149,9 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
         )
 
 
+########################################################################################################
+# Decorators to help create models from DataFrameModel class.
+########################################################################################################
 def infer_dataframe_dtypes_from_fit(func):
 
     @wraps(func)
@@ -151,21 +165,28 @@ def infer_dataframe_dtypes_from_fit(func):
                 "The decorator only works on fit methods for objects of type DataFrameModel."
             )
 
-        assert isinstance(X, pd.DataFrame), 'X must be a DataFrame'
+        if isinstance(X, pd.DataFrame) is False:
+            raise ValueError(
+                "X must be a pandas DataFrame."
+            )
+
+        if isinstance(y, pd.Series) is False:
+            raise ValueError(
+                "y must be a pandas Series."
+            )
+
         if self_var.features is None:
             raise ValueError("features attribute must be set. It should be a list of features")
 
-        if self_var.feature_dtypes is None:
-            if all(X[self_var.features].dtypes.isin(self_var.ACCEPTED_DTYPES)):
-                self_var.feature_dtypes = X[self_var.features].dtypes
-            else:
-                raise ValueError(f"Dtypes of columns of X must be in {self_var.ACCEPTED_DTYPES}]")
+        if all(X[self_var.features].dtypes.isin(self_var.ACCEPTED_DTYPES)):
+            self_var.feature_dtypes = X[self_var.features].dtypes
+        else:
+            raise ValueError(f"Dtypes of columns of X must be in {self_var.ACCEPTED_DTYPES}]")
 
-        if self_var.target_dtype is None:
-            if y.dtypes in self_var.ACCEPTED_DTYPES:
-                self_var.target_dtype = y.dtypes
-            else:
-                raise ValueError(f"Dtype of y must be in {self_var.ACCEPTED_DTYPES}]")
+        if y.dtypes in self_var.ACCEPTED_DTYPES:
+            self_var.target_dtype = y.dtypes
+        else:
+            raise ValueError(f"Dtype of y must be in {self_var.ACCEPTED_DTYPES}]")
 
         func(*args)
 
@@ -183,16 +204,59 @@ def infer_dataframe_features_from_fit(func):
             raise ValueError(
                 "The decorator only works on fit methods for objects of type DataFrameModel."
             )
+        if isinstance(X, pd.DataFrame) is False:
+            raise ValueError(
+                "X must be a pandas DataFrame."
+            )
 
-        assert isinstance(X, pd.DataFrame), 'X must be a DataFrame'
-        if self_var.features is None:
-            self_var.features = list(X.columns)
+        self_var.features = list(X.columns)
 
         func(*args)
 
     return wrapper
 
 
+def validate_prediction_input(func):
+
+    @wraps(func)
+    def wrapper(*args):
+        self_var = args[0]
+        X = args[1]
+
+        if isinstance(self_var, DataFrameModel) is False:
+            raise ValueError(
+                "The decorator only works on fit methods for objects of type DataFrameModel."
+            )
+
+        if isinstance(X, pd.DataFrame) is False:
+            raise ValueError(
+                "X must be a pandas DataFrame."
+            )
+
+        if self_var.features is None:
+            raise ValueError("features attribute must be set. It should be a list of features")
+
+        if self_var.feature_dtypes is None:
+            raise ValueError("dtypes attribute must be set. It should be a of the type pandas.DataFrame.dtypes")
+
+        if not set(X.columns) == set(self_var.features):
+            raise ValueError(f"The following features must be in X: {self_var.features}")
+
+        if not X[self_var.features].dtypes.to_dict() == self_var.feature_dtypes.to_dict():
+            raise ValueError(f"Dtypes must be: {self_var.feature_dtypes.to_dict()}")
+
+        if not all(X[self_var.features].dtypes.isin(self_var.ACCEPTED_DTYPES)):
+            raise ValueError(f"Dtypes of columns of X must be in {self_var.ACCEPTED_DTYPES}]")
+
+        return_values = func(*args)
+        return return_values
+
+    return wrapper
+
+
+########################################################################################################
+# Wrapper for mlflow
+########################################################################################################
 class MLFlowWrapper(mlflow.pyfunc.PythonModel):
 
     def __init__(self, model):
@@ -202,6 +266,9 @@ class MLFlowWrapper(mlflow.pyfunc.PythonModel):
         return self.model.predict(model_input)
 
 
+########################################################################################################
+# Base transformer classes
+########################################################################################################
 class BaseTransformer(metaclass=ABCMeta):
     """
     Base class for Transformera

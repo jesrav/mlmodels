@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv, find_dotenv
 from pathlib import Path
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 from model_class import RandomForestRegressorModel
 
 def eval_metrics(actual, pred):
