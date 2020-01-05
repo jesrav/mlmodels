@@ -1,11 +1,8 @@
 import pandas as pd
 import numpy as np
-import os
-from dotenv import load_dotenv, find_dotenv
-from pathlib import Path
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from mlmodels import MLFlowWrapper, FeatureSplitModel
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+from mlmodels import FeatureSplitModel
 from model_class import RandomForestRegressorModel
 
 
@@ -33,18 +30,19 @@ if __name__ == '__main__':
     train_y = train["quality"]
     test_y = test["quality"]
 
-    features = ["density", "chlorides", "alcohol"]
-    individual_model = RandomForestRegressorModel(
-        features=features,
-        random_forest_params={'n_estimators': 100, 'max_depth': 15},
-    )
+    # Create dictionary of individual models. In this cas all the same.
+    features_individual_models = ["density", "chlorides", "alcohol"]
+    group_model_dict = {group: RandomForestRegressorModel(
+        features=features_individual_models,
+        random_forest_params={'n_estimators': 100, 'max_depth': 15}
+    ) for group in data['group'].unique()}
 
+    # Create feature split model
+    features = features_individual_models + ["group"]
     model = FeatureSplitModel(
+        features=features,
         group_column="group",
-        group_model_dict={group: RandomForestRegressorModel(
-            features=features,
-            random_forest_params={'n_estimators': 100, 'max_depth': 15}
-        ) for group in data['group'].unique()}
+        group_model_dict=group_model_dict
     )
 
     model.fit(train_x, train_y)

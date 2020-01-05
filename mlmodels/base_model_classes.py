@@ -239,7 +239,7 @@ def validate_prediction_input(func):
         if self_var.feature_dtypes is None:
             raise ValueError("dtypes attribute must be set. It should be a of the type pandas.DataFrame.dtypes")
 
-        if not set(X.columns) == set(self_var.features):
+        if not (set(X.columns) >= set(self_var.features)):
             raise ValueError(f"The following features must be in X: {self_var.features}")
 
         if not X[self_var.features].dtypes.to_dict() == self_var.feature_dtypes.to_dict():
@@ -252,6 +252,40 @@ def validate_prediction_input(func):
         return return_values
 
     return wrapper
+
+
+########################################################################################################
+#
+########################################################################################################
+class FeatureSplitModel(DataFrameModel):
+    MODEL_NAME = 'Feature split meta model'
+
+    def __init__(self, features=None, group_column=None, group_model_dict=None):
+        super().__init__()
+        self.features = features
+        self.group_model_dict = group_model_dict
+        self.group_column = group_column
+
+    @infer_dataframe_dtypes_from_fit
+    def fit(self, X, y):
+        assert isinstance(X, pd.DataFrame), "X must be a Pandas data frame"
+        assert X.shape[0] == y.shape[0], "X and y must have same number of rows"
+        assert self.group_column in X.columns, f"{self.group_column} must be a columns in X"
+
+        for group in X[self.group_column].unique():
+            mask = (X[self.group_column] == group)
+            self.group_model_dict[group].fit(X[mask], y[mask])
+
+    def predict(self, X):
+        assert isinstance(X, pd.DataFrame), "X must be a Pandas data frame"
+        assert self.group_column in X.columns, f"{self.group_column} must be a columns in X"
+        X = X.copy()
+        X['prediction'] = float('NaN')
+        for group in X[self.group_column].unique():
+            mask = (X[self.group_column] == group)
+            X.loc[mask, 'prediction'] = self.group_model_dict[group].predict(X[mask])
+
+        return X['prediction'].values
 
 
 ########################################################################################################
