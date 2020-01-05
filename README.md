@@ -7,7 +7,7 @@ pip install git+https://github.com/jesrav/mlmodels#egg=mlmodels
 ```
 To install dependencies for examles
 ```bash
-pip install -r requirements.txt
+pip install -r examples/requirements.txt
 ```
 ## Base classes for ML models
 The BaseModel class is an abstract class that enforces child classes to implement
