@@ -26,16 +26,16 @@ if __name__ == '__main__':
 
     load_dotenv(find_dotenv())
 
-    if os.environ.get("MLFLOW_SERVER_URL"):
-        mlflow.set_tracking_uri(
-           'http://{user}:{psw}@{server}'.format(
-               server=os.environ.get("MLFLOW_SERVER_URL"),
-               user=os.environ.get("MLFLOW_USER"),
-               psw=os.environ.get("MLFLOW_PASSWORD"),
-           )
-        )
-
-    mlflow.set_experiment('test_experiment')
+    # if os.environ.get("MLFLOW_SERVER_URL"):
+    #     mlflow.set_tracking_uri(
+    #        'http://{user}:{psw}@{server}'.format(
+    #            server=os.environ.get("MLFLOW_SERVER_URL"),
+    #            user=os.environ.get("MLFLOW_USER"),
+    #            psw=os.environ.get("MLFLOW_PASSWORD"),
+    #        )
+    #     )
+    #
+    # mlflow.set_experiment('test_experiment')
 
     # Read the wine-quality csv file from the URL
     csv_url = 'http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv'
@@ -72,7 +72,7 @@ if __name__ == '__main__':
         model_mlflow = MLFlowWrapper(model)
 
         # log model
-        mlflow.pyfunc.log_model(artifact_path='model/', code_path=[code_path], python_model=model_mlflow, conda_env=conda_env_path)
+        # mlflow.pyfunc.log_model(artifact_path='model/', code_path=[code_path], python_model=model_mlflow, conda_env=conda_env_path)
 
         mlflow.pyfunc.save_model(
             path=model_path,

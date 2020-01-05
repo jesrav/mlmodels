@@ -39,7 +39,7 @@ if __name__ == '__main__':
     # Fit model, make predictions and evaluate
     features = ["pH", "density", "chlorides", "alcohol"]
     model = RandomForestRegressorModel(
-        # features=features,
+        features=features,
         random_forest_params={'n_estimators': 100, 'max_depth': 15},
     )
     model.fit(train_x, train_y)
