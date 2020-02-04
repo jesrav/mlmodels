@@ -125,7 +125,7 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
 
     @staticmethod
     def model_input_from_dict(dict_data):
-        return pd.DataFrame.from_records(dict_data)
+        return pd.DataFrame.from_records(dict_data['data'])
 
 
 ########################################################################################################
