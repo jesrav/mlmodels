@@ -13,9 +13,8 @@ setup(
         'simplejson',
         'scikit-learn',
         'pandas',
-        'apispec',
         'jinja2',
         'PyYAML',
-        'marshmallow-dataframe'
+        'numpy'
     ],
 )
