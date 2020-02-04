@@ -51,10 +51,10 @@ definitions:
 """
 
 
-def open_api_yaml_specification(feature_dict, target_dict):
+def open_api_yaml_specification(model_input_record_field_schema_dict, model_target_field_schema_dict):
     t = Template(template_str)
-    return t.render(feature_dict=feature_dict, target_dict=target_dict)
+    return t.render(feature_dict=model_input_record_field_schema_dict, target_dict=model_target_field_schema_dict)
 
 
-def open_api_dict_specification(feature_dict, target_dict):
-    return yaml.load(open_api_yaml_specification(feature_dict, target_dict))
+def open_api_dict_specification(model_input_record_field_schema_dict, model_target_field_schema_dict):
+    return yaml.load(open_api_yaml_specification(model_input_record_field_schema_dict, model_target_field_schema_dict))
