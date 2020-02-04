@@ -3,7 +3,7 @@ import yaml
 
 template_str = """
 tags:
-  - ml_endpoint
+  - predict
 info:
   title: Prediction open api spec
   version: 1.0.0
