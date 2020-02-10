@@ -83,13 +83,17 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
     def __init__(
             self,
             features=None,
+            categorical_columns=None,
             feature_dtypes=None,
             target_dtype=None,
+            possible_categorical_column_values=None,
     ):
         super().__init__()
         self.features = features
+        self.categorical_columns = categorical_columns
         self.feature_dtypes = feature_dtypes
         self.target_dtype = target_dtype
+        self.possible_categorical_column_values = possible_categorical_column_values
 
     ACCEPTED_DTYPES = (
         np.dtype('int64'),
@@ -114,12 +118,14 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
     def get_open_api_yaml(self):
         return open_api_yaml_specification(
             model_input_record_field_schema_dict=self.get_model_input_record_field_schema(),
+            possible_categorical_column_values=self.possible_categorical_column_values,
             model_target_field_schema_dict=self.DTYPE_TO_JSON_TYPE_MAP[self.target_dtype]
         )
 
     def get_open_api_dict(self):
         return open_api_dict_specification(
             model_input_record_field_schema_dict=self.get_model_input_record_field_schema(),
+            possible_categorical_column_values=self.possible_categorical_column_values,
             model_target_field_schema_dict=self.DTYPE_TO_JSON_TYPE_MAP[self.target_dtype]
         )
 
@@ -167,6 +173,53 @@ def infer_dataframe_dtypes_from_fit(func):
         else:
             raise ValueError(f"Dtype of y must be in {self_var.ACCEPTED_DTYPES}]")
 
+        return func(*args)
+
+    return wrapper
+
+
+def infer_category_feature_values_from_fit(func):
+
+    @wraps(func)
+    def wrapper(*args):
+        self_var = args[0]
+        X = args[1]
+        y = args[2]
+
+        if isinstance(self_var, DataFrameModel) is False:
+            raise ValueError(
+                "The decorator only works on fit methods for objects of type DataFrameModel."
+            )
+
+        if isinstance(X, pd.DataFrame) is False:
+            raise ValueError(
+                "X must be a pandas DataFrame."
+            )
+
+        if isinstance(y, pd.Series) is False:
+            raise ValueError(
+                "y must be a pandas Series."
+            )
+
+        if self_var.features is None:
+            raise ValueError("features attribute must be set. It should be a list of features")
+
+        if self_var.categorical_columns is None:
+            raise ValueError("features attribute must be set. It should be a list of features")
+
+        if not set(self_var.categorical_columns).issubset(set(self_var.features).union(set(y.name))):
+            raise ValueError("categorical_features must be a subset of the union of features and target name")
+
+        categorical_features = [cat_feat for cat_feat in self_var.categorical_columns if cat_feat in self_var.features]
+        categorical_target = [cat_feat for cat_feat in self_var.categorical_columns if cat_feat == y.name]
+
+        self_var.possible_categorical_column_values = {
+            categorical_feature: list(X[categorical_feature].unique()) for categorical_feature in categorical_features
+        }
+
+        if categorical_target:
+            self_var.possible_categorical_column_values[categorical_target] = list(X[categorical_target].unique())
+
         func(*args)
 
     return wrapper
@@ -190,7 +243,7 @@ def infer_dataframe_features_from_fit(func):
 
         self_var.features = list(X.columns)
 
-        func(*args)
+        return func(*args)
 
     return wrapper
 

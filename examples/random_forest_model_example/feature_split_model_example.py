@@ -1,9 +1,13 @@
+from pathlib import Path
+import os
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from mlmodels import FeatureSplitModel
 from model_class import RandomForestRegressorModel
+from mlmodels import MLFlowWrapper
+import mlflow.pyfunc
 
 
 def eval_metrics(actual, pred):
@@ -13,6 +17,12 @@ def eval_metrics(actual, pred):
 
 
 if __name__ == '__main__':
+
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+
+    code_path = str(dir_path / Path('model_class.py'))
+    model_path = str(dir_path / Path('model'))
+    conda_env_path = str(dir_path / Path('conda.yaml'))
 
     # Read the wine-quality csv file from the URL
     csv_url = 'http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv'
@@ -53,3 +63,12 @@ if __name__ == '__main__':
 
     print("  RMSE: %s" % rmse)
     print("  MAE: %s" % mae)
+
+    model_mlflow = MLFlowWrapper(model)
+
+    mlflow.pyfunc.save_model(
+        path=model_path,
+        python_model=model_mlflow,
+        code_path=[code_path],
+        conda_env=conda_env_path
+    )
