@@ -70,77 +70,81 @@ class BaseModel(metaclass=ABCMeta):
         return model
 
 
-class DataFrameModel(BaseModel, metaclass=ABCMeta):
-    """
-    Base class for data frame models
+def data_frame_model(cls):
 
-    The class inherits from BaseModelClass, but has the fit and predict methods should work on pandas data frames and
-    series. Features and dtypes should either be set on initialization or infered using the decorators
-    infer_dataframe_dtypes_from_fit and infer_dataframe_features_from_fit.
-    Having the dtypes allows us to validate the model input using the decorator validate_prediction_input
-    and get the open api schema with get_open_api_yaml or get_open_api_dict.
-    """
-    def __init__(
-            self,
-            features=None,
-            categorical_columns=None,
-            feature_dtypes=None,
-            target_dtype=None,
-            possible_categorical_column_values=None,
-    ):
-        super().__init__()
-        self.features = features
-        self.categorical_columns = categorical_columns
-        self.feature_dtypes = feature_dtypes
-        self.target_dtype = target_dtype
-        self.possible_categorical_column_values = possible_categorical_column_values
+    @wraps(cls)
+    def wrapper(*args, **kws):
 
-    ACCEPTED_DTYPES = (
-        np.dtype('int64'),
-        np.dtype('int32'),
-        np.dtype('float64'),
-        np.dtype('float32'),
-        np.dtype('O'),
-    )
+        if not (
+            set(['features', 'categorical_columns'])
+            .issubset(set(cls.__init__.__code__.co_varnames))
+        ):
+            raise ValueError("features' and 'categorical_columns' must be initialized in model class")
 
-    DTYPE_TO_JSON_TYPE_MAP = {
-        np.dtype('int64'): {'type': 'number', 'format': 'integer'},
-        np.dtype('int32'): {'type': 'number', 'format': 'integer'},
-        np.dtype('float64'): {'type': 'number', 'format': 'float'},
-        np.dtype('float32'): {'type': 'number', 'format': 'float'},
-        np.dtype('O'): {'type': 'string'},
-    }
 
-    def get_model_input_record_field_schema(self):
-        zipped_feature_dtype_pairs = zip(self.feature_dtypes.index, self.feature_dtypes)
-        return {feature: self.DTYPE_TO_JSON_TYPE_MAP[dtype] for (feature, dtype) in zipped_feature_dtype_pairs}
-
-    def get_open_api_yaml(self):
-        return open_api_yaml_specification(
-            model_input_record_field_schema_dict=self.get_model_input_record_field_schema(),
-            possible_categorical_column_values=(self.possible_categorical_column_values or {}),
-            model_target_field_schema_dict=self.DTYPE_TO_JSON_TYPE_MAP[self.target_dtype]
+        cls.ACCEPTED_DTYPES = (
+            np.dtype('int64'),
+            np.dtype('int32'),
+            np.dtype('float64'),
+            np.dtype('float32'),
+            np.dtype('O'),
         )
 
-    def get_open_api_dict(self):
-        return open_api_dict_specification(
-            model_input_record_field_schema_dict=self.get_model_input_record_field_schema(),
-            possible_categorical_column_values=(self.possible_categorical_column_values or {}),
-            model_target_field_schema_dict=self.DTYPE_TO_JSON_TYPE_MAP[self.target_dtype]
-        )
+        cls.DTYPE_TO_JSON_TYPE_MAP = {
+            np.dtype('int64'): {'type': 'number', 'format': 'integer'},
+            np.dtype('int32'): {'type': 'number', 'format': 'integer'},
+            np.dtype('float64'): {'type': 'number', 'format': 'float'},
+            np.dtype('float32'): {'type': 'number', 'format': 'float'},
+            np.dtype('O'): {'type': 'string'},
+        }
 
-    def convert_model_input_dtypes(self, model_input):
-        """If types inferred py pandas to not match the required dtypes,
-        we try to convert them."""
-        dtype_dict = self.feature_dtypes.astype(str).to_dict()
-        return model_input.astype(dtype_dict)
+        def get_model_input_record_field_schema(self):
+            zipped_feature_dtype_pairs = zip(self.feature_dtypes.index, self.feature_dtypes)
+            return {feature: self.DTYPE_TO_JSON_TYPE_MAP[dtype] for (feature, dtype) in zipped_feature_dtype_pairs}
 
-    def model_input_from_dict(self, dict_data):
-        """Read data from record type deictionary representation"""
+        def get_open_api_yaml(self):
+            return open_api_yaml_specification(
+                model_input_record_field_schema_dict=self.get_model_input_record_field_schema(),
+                possible_categorical_column_values=(self.possible_categorical_column_values or {}),
+                model_target_field_schema_dict=self.DTYPE_TO_JSON_TYPE_MAP[self.target_dtype]
+            )
 
-        model_input = pd.DataFrame.from_records(dict_data['data'])
-        return self.convert_model_input_dtypes(model_input)
+        def get_open_api_dict(self):
+            if not hasattr(self, 'possible_categorical_column_values'):
+                self.possible_categorical_column_values = None
+            return open_api_dict_specification(
+                model_input_record_field_schema_dict=self.get_model_input_record_field_schema(),
+                possible_categorical_column_values=(self.possible_categorical_column_values or {}),
+                model_target_field_schema_dict=self.DTYPE_TO_JSON_TYPE_MAP[self.target_dtype]
+            )
 
+        def convert_model_input_dtypes(self, model_input):
+            """If types inferred py pandas to not match the required dtypes,
+            we try to convert them."""
+            dtype_dict = self.feature_dtypes.astype(str).to_dict()
+            return model_input.astype(dtype_dict)
+
+        def model_input_from_dict(self, dict_data):
+            """Read data from record type deictionary representation"""
+
+            model_input = pd.DataFrame.from_records(dict_data['data'])
+            return self.convert_model_input_dtypes(model_input)
+
+        # Set new class methods
+        cls.get_model_input_record_field_schema = get_model_input_record_field_schema
+        cls.get_open_api_yaml = get_open_api_yaml
+        cls.get_open_api_dict = get_open_api_dict
+        cls.convert_model_input_dtypes = convert_model_input_dtypes
+        cls.model_input_from_dict = model_input_from_dict
+
+        # Modify class methods
+        cls.fit = infer_category_feature_values_from_fit(cls.fit)
+        cls.fit = infer_dataframe_dtypes_from_fit(cls.fit)
+        cls.predict = validate_prediction_input(cls.predict)
+
+        return cls(*args, **kws)
+
+    return wrapper
 
 ########################################################################################################
 # Decorators to help create models from DataFrameModel class.
@@ -152,11 +156,6 @@ def infer_dataframe_dtypes_from_fit(func):
         self_var = args[0]
         X = args[1]
         y = args[2]
-
-        if isinstance(self_var, DataFrameModel) is False:
-            raise ValueError(
-                "The decorator only works on fit methods for objects of type DataFrameModel."
-            )
 
         if isinstance(X, pd.DataFrame) is False:
             raise ValueError(
@@ -197,10 +196,6 @@ def infer_category_feature_values_from_fit(func):
         if self_var.categorical_columns is None:
             return func(*args)
         else:
-            if isinstance(self_var, DataFrameModel) is False:
-                raise ValueError(
-                    "The decorator only works on fit methods for objects of type DataFrameModel."
-                )
 
             if isinstance(X, pd.DataFrame) is False:
                 raise ValueError(
@@ -240,10 +235,6 @@ def infer_dataframe_features_from_fit(func):
         self_var = args[0]
         X = args[1]
 
-        if isinstance(self_var, DataFrameModel) is False:
-            raise ValueError(
-                "The decorator only works on fit methods for objects of type DataFrameModel."
-            )
         if isinstance(X, pd.DataFrame) is False:
             raise ValueError(
                 "X must be a pandas DataFrame."
@@ -262,11 +253,6 @@ def validate_prediction_input(func):
     def wrapper(*args):
         self_var = args[0]
         X = args[1]
-
-        if isinstance(self_var, DataFrameModel) is False:
-            raise ValueError(
-                "The decorator only works on fit methods for objects of type DataFrameModel."
-            )
 
         if isinstance(X, pd.DataFrame) is False:
             raise ValueError(
@@ -297,30 +283,23 @@ def validate_prediction_input(func):
 ########################################################################################################
 #
 ########################################################################################################
-class FeatureSplitModel(DataFrameModel):
+@data_frame_model
+class FeatureSplitModel(BaseModel):
     MODEL_NAME = 'Feature split meta model'
 
     def __init__(
             self,
             features=None,
             categorical_columns=None,
-            feature_dtypes=None,
-            target_dtype=None,
-            possible_categorical_column_values=None,
             group_column=None,
             group_model_dict=None
     ):
         super().__init__()
         self.features = features
-        self.categorical_columns = categorical_columns
-        self.feature_dtypes = feature_dtypes
-        self.target_dtype = target_dtype
-        self.possible_categorical_column_values = possible_categorical_column_values
+        self.categorical_columns    = categorical_columns
         self.group_model_dict = group_model_dict
         self.group_column = group_column
 
-    @infer_dataframe_dtypes_from_fit
-    @infer_category_feature_values_from_fit
     def fit(self, X, y):
         assert isinstance(X, pd.DataFrame), "X must be a Pandas data frame"
         assert X.shape[0] == y.shape[0], "X and y must have same number of rows"
@@ -330,7 +309,6 @@ class FeatureSplitModel(DataFrameModel):
             mask = (X[self.group_column] == group)
             self.group_model_dict[group].fit(X[mask], y[mask])
 
-    @validate_prediction_input
     def predict(self, X):
         assert isinstance(X, pd.DataFrame), "X must be a Pandas data frame"
         assert self.group_column in X.columns, f"{self.group_column} must be a columns in X"
@@ -343,9 +321,9 @@ class FeatureSplitModel(DataFrameModel):
         return X['prediction'].values
 
 
-########################################################################################################
-# Wrapper for mlflow
-########################################################################################################
+# ########################################################################################################
+# # Wrapper for mlflow
+# ########################################################################################################
 class MLFlowWrapper(mlflow.pyfunc.PythonModel):
 
     def __init__(self, model):
