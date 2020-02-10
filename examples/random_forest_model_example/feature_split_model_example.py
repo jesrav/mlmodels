@@ -29,7 +29,7 @@ if __name__ == '__main__':
     data = pd.read_csv(csv_url, sep=';')
 
     # Create 3 randomly assigned groups
-    data['group'] = np.random.choice(3, len(data))
+    data['group'] = np.random.choice(['group1', 'group2'], len(data))
 
     # Split the data into training and test sets. (0.75, 0.25) split.
     train, test = train_test_split(data)
@@ -51,6 +51,7 @@ if __name__ == '__main__':
     features = features_individual_models + ["group"]
     model = FeatureSplitModel(
         features=features,
+        categorical_columns=['group'],
         group_column="group",
         group_model_dict=group_model_dict
     )

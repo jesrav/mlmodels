@@ -118,14 +118,14 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
     def get_open_api_yaml(self):
         return open_api_yaml_specification(
             model_input_record_field_schema_dict=self.get_model_input_record_field_schema(),
-            possible_categorical_column_values=self.possible_categorical_column_values,
+            possible_categorical_column_values=(self.possible_categorical_column_values or {}),
             model_target_field_schema_dict=self.DTYPE_TO_JSON_TYPE_MAP[self.target_dtype]
         )
 
     def get_open_api_dict(self):
         return open_api_dict_specification(
             model_input_record_field_schema_dict=self.get_model_input_record_field_schema(),
-            possible_categorical_column_values=self.possible_categorical_column_values,
+            possible_categorical_column_values=(self.possible_categorical_column_values or {}),
             model_target_field_schema_dict=self.DTYPE_TO_JSON_TYPE_MAP[self.target_dtype]
         )
 
@@ -194,41 +194,41 @@ def infer_category_feature_values_from_fit(func):
         X = args[1]
         y = args[2]
 
-        if isinstance(self_var, DataFrameModel) is False:
-            raise ValueError(
-                "The decorator only works on fit methods for objects of type DataFrameModel."
-            )
-
-        if isinstance(X, pd.DataFrame) is False:
-            raise ValueError(
-                "X must be a pandas DataFrame."
-            )
-
-        if isinstance(y, pd.Series) is False:
-            raise ValueError(
-                "y must be a pandas Series."
-            )
-
-        if self_var.features is None:
-            raise ValueError("features attribute must be set. It should be a list of features")
-
         if self_var.categorical_columns is None:
-            raise ValueError("features attribute must be set. It should be a list of features")
+            return func(*args)
+        else:
+            if isinstance(self_var, DataFrameModel) is False:
+                raise ValueError(
+                    "The decorator only works on fit methods for objects of type DataFrameModel."
+                )
 
-        if not set(self_var.categorical_columns).issubset(set(self_var.features).union(set(y.name))):
-            raise ValueError("categorical_features must be a subset of the union of features and target name")
+            if isinstance(X, pd.DataFrame) is False:
+                raise ValueError(
+                    "X must be a pandas DataFrame."
+                )
 
-        categorical_features = [cat_feat for cat_feat in self_var.categorical_columns if cat_feat in self_var.features]
-        categorical_target = [cat_feat for cat_feat in self_var.categorical_columns if cat_feat == y.name]
+            if isinstance(y, pd.Series) is False:
+                raise ValueError(
+                    "y must be a pandas Series."
+                )
 
-        self_var.possible_categorical_column_values = {
-            categorical_feature: list(X[categorical_feature].unique()) for categorical_feature in categorical_features
-        }
+            if self_var.features is None:
+                raise ValueError("features attribute must be set. It should be a list of features")
 
-        if categorical_target:
-            self_var.possible_categorical_column_values[categorical_target] = list(X[categorical_target].unique())
+            if not set(self_var.categorical_columns).issubset(set(self_var.features).union(set(y.name))):
+                raise ValueError("categorical_features must be a subset of the union of features and target name")
 
-        func(*args)
+            categorical_features = [cat_feat for cat_feat in self_var.categorical_columns if cat_feat in self_var.features]
+            categorical_target = [cat_feat for cat_feat in self_var.categorical_columns if cat_feat == y.name]
+
+            self_var.possible_categorical_column_values = {
+                categorical_feature: list(X[categorical_feature].unique()) for categorical_feature in categorical_features
+            }
+
+            if categorical_target:
+                self_var.possible_categorical_column_values[categorical_target] = list(X[categorical_target].unique())
+
+            return func(*args)
 
     return wrapper
 
@@ -300,13 +300,27 @@ def validate_prediction_input(func):
 class FeatureSplitModel(DataFrameModel):
     MODEL_NAME = 'Feature split meta model'
 
-    def __init__(self, features=None, group_column=None, group_model_dict=None):
+    def __init__(
+            self,
+            features=None,
+            categorical_columns=None,
+            feature_dtypes=None,
+            target_dtype=None,
+            possible_categorical_column_values=None,
+            group_column=None,
+            group_model_dict=None
+    ):
         super().__init__()
         self.features = features
+        self.categorical_columns = categorical_columns
+        self.feature_dtypes = feature_dtypes
+        self.target_dtype = target_dtype
+        self.possible_categorical_column_values = possible_categorical_column_values
         self.group_model_dict = group_model_dict
         self.group_column = group_column
 
     @infer_dataframe_dtypes_from_fit
+    @infer_category_feature_values_from_fit
     def fit(self, X, y):
         assert isinstance(X, pd.DataFrame), "X must be a Pandas data frame"
         assert X.shape[0] == y.shape[0], "X and y must have same number of rows"
@@ -316,6 +330,7 @@ class FeatureSplitModel(DataFrameModel):
             mask = (X[self.group_column] == group)
             self.group_model_dict[group].fit(X[mask], y[mask])
 
+    @validate_prediction_input
     def predict(self, X):
         assert isinstance(X, pd.DataFrame), "X must be a Pandas data frame"
         assert self.group_column in X.columns, f"{self.group_column} must be a columns in X"
