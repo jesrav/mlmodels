@@ -33,6 +33,9 @@ definitions:
                     format: {{feature_dict[feat]['format']}}
                     nullable: False
                     type: {{feature_dict[feat]['type']}}
+                    {% if feat in possible_categorical_column_values %}
+                    enum: {{possible_categorical_column_values[feat]}}
+                    {% endif %}
 {% endfor %}
           type: array
       required:
@@ -51,10 +54,24 @@ definitions:
 """
 
 
-def open_api_yaml_specification(model_input_record_field_schema_dict, model_target_field_schema_dict):
+def open_api_yaml_specification(
+        model_input_record_field_schema_dict,
+        possible_categorical_column_values,
+        model_target_field_schema_dict):
     t = Template(template_str)
-    return t.render(feature_dict=model_input_record_field_schema_dict, target_dict=model_target_field_schema_dict)
+    return t.render(
+        feature_dict=model_input_record_field_schema_dict,
+        possible_categorical_column_values=possible_categorical_column_values,
+        target_dict=model_target_field_schema_dict)
 
 
-def open_api_dict_specification(model_input_record_field_schema_dict, model_target_field_schema_dict):
-    return yaml.load(open_api_yaml_specification(model_input_record_field_schema_dict, model_target_field_schema_dict))
+def open_api_dict_specification(
+        model_input_record_field_schema_dict,
+        possible_categorical_column_values,
+        model_target_field_schema_dict,
+):
+    return yaml.load(open_api_yaml_specification(
+        model_input_record_field_schema_dict,
+        possible_categorical_column_values,
+        model_target_field_schema_dict,
+    ))

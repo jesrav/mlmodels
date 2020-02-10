@@ -118,12 +118,14 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
     def get_open_api_yaml(self):
         return open_api_yaml_specification(
             model_input_record_field_schema_dict=self.get_model_input_record_field_schema(),
+            possible_categorical_column_values=self.possible_categorical_column_values,
             model_target_field_schema_dict=self.DTYPE_TO_JSON_TYPE_MAP[self.target_dtype]
         )
 
     def get_open_api_dict(self):
         return open_api_dict_specification(
             model_input_record_field_schema_dict=self.get_model_input_record_field_schema(),
+            possible_categorical_column_values=self.possible_categorical_column_values,
             model_target_field_schema_dict=self.DTYPE_TO_JSON_TYPE_MAP[self.target_dtype]
         )
 
