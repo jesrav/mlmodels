@@ -129,9 +129,17 @@ class DataFrameModel(BaseModel, metaclass=ABCMeta):
             model_target_field_schema_dict=self.DTYPE_TO_JSON_TYPE_MAP[self.target_dtype]
         )
 
-    @staticmethod
-    def model_input_from_dict(dict_data):
-        return pd.DataFrame.from_records(dict_data['data'])
+    def convert_model_input_dtypes(self, model_input):
+        """If types inferred py pandas to not match the required dtypes,
+        we try to convert them."""
+        dtype_dict = self.feature_dtypes.astype(str).to_dict()
+        return model_input.astype(dtype_dict)
+
+    def model_input_from_dict(self, dict_data):
+        """Read data from record type deictionary representation"""
+
+        model_input = pd.DataFrame.from_records(dict_data['data'])
+        return self.convert_model_input_dtypes(model_input)
 
 
 ########################################################################################################
