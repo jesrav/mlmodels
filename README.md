@@ -14,7 +14,8 @@ The BaseModel class is an abstract class that enforces child classes to implemen
 - A MODEL_NAME attribute
 - A fit method
 - A predict method
-It gives you serialization and deserialization out of the box.
+
+It gives you the time the model was fitted plus serialization and deserialization out of the box.
 
 ```python
 from mlmodels import BaseModel
@@ -35,6 +36,10 @@ dummy_model.save(fname='model.pickle')
 
 # Load model
 loaded_model = DummyModel().load('model.pickle')
+
+# When was the model initialized?
+dummy_model.model_initiated_dt
+# Returns:  datetime.datetime(2020, 2, 12, 9, 46, 19, 81250)
 
 # Predict
 loaded_model.predict([[1, 1], [2, 2]])
