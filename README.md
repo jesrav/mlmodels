@@ -49,7 +49,7 @@ The data frame model decorator can be used to add some functionality to a model 
 It adds methods for using the features and dtypes of the input dataframe to generate an open api specification.
 The class you decorate needs to set the following attributes in the init method.
 - a features attribute (list of feature names)
-- a categorical_columns (list of categorical columns)
+- a categorical_columns attribute (list of categorical columns)
 
 ```python
 from sklearn.ensemble import RandomForestRegressor
@@ -101,7 +101,6 @@ train_x = train.drop(["quality"], axis=1)
 test_x = test.drop(["quality"], axis=1)
 train_y = train["quality"]
 test_y = test["quality"]
-
 
 # Fit model make predictions and evaluate
 features = ["pH", "density", "chlorides", "alcohol", "group1", "group2"]
