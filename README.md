@@ -39,37 +39,43 @@ loaded_model = DummyModel().load('model.pickle')
 # Predict
 loaded_model.predict([[1, 1], [2, 2]])
 ```
-## DataFrameModel class
-The DataFrameModel class inherits from BaseModel and is meant to be used with structured data in pandas dataframes.
+## Data frame model decorator
+The data frame model decorator is can be used to add some functionality to a model class that takes a Pandas DataFrame as input and produces predictions in the form of a Pandas Series or DataFrame.
 It has some methods for using the features and dtypes of the input dataframe to generate an open api specification.
-It also has some helper decorators for inferring features and dtypes on fit and validating input on predict.
+The class also needs to set the following attributes in the init method.
+- a features attribute (list of feature names)
+- a categorical_columns (list of categorical columns)
 
 ```python
-import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
+import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
-from mlmodels import DataFrameModel, infer_dataframe_dtypes_from_fit, validate_prediction_input
+from mlmodels import (
+    BaseModel,
+    data_frame_model
+)
 
-# Create model class
-class RandomForestRegressorModel(DataFrameModel):
+@data_frame_model
+class RandomForestRegressorModel(BaseModel):
     MODEL_NAME = 'Random forest model'
 
     def __init__(
             self,
-            features=None,
-            random_forest_params={'n_estimators': 100, 'max_depth': 30}
+            features,
+            categorical_columns=None,
+            random_forest_params={'n_estimators': 100, 'max_depth': 30},
     ):
         super().__init__()
         self.features = features
+        self.categorical_columns = categorical_columns
         self.random_forest_params = random_forest_params
         self.model = RandomForestRegressor(**random_forest_params)
 
-    @infer_dataframe_dtypes_from_fit
     def fit(self, X, y):
         self.model.fit(X[self.features], y)
-        return self.model
+        return self
 
-    @validate_prediction_input
     def predict(self, X):
         predictions = self.model.predict(X[self.features])
         return predictions
@@ -77,6 +83,10 @@ class RandomForestRegressorModel(DataFrameModel):
 # Read data
 csv_url = 'http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv'
 data = pd.read_csv(csv_url, sep=';')
+
+# Create categorical features
+data["group1"] = np.random.choice(3, len(data))
+data["group2"] = np.random.choice([3, 7], len(data))
 
 # Split the data into training and test sets. (0.75, 0.25) split.
 train, test = train_test_split(data)
@@ -87,8 +97,9 @@ test_x = test.drop(["quality"], axis=1)
 train_y = train["quality"]
 test_y = test["quality"]
 
+
 # Fit model make predictions and evaluate
-features = ["pH", "density", "chlorides", "alcohol"]
+features = ["pH", "density", "chlorides", "alcohol", "group1", "group2"]
 model = RandomForestRegressorModel(
     features=features,
     random_forest_params={'n_estimators': 100, 'max_depth': 15},
@@ -101,16 +112,18 @@ predicted_qualities = model.predict(test_x)
 If the input dataframe does not have the right features or the columns do not have the right dtypes,
 you will get an error.
 ```python
-# Example of missing feature
+# Example of missing features
 model.predict(test_x[["density", "chlorides", "alcohol"]])
-# returns: ValueError: The following features must be in X: ['pH', 'density', 'chlorides', 'alcohol']
+# returns: ValueError: The following features must be in X: ['pH', 'density', 'chlorides', 'alcohol', 'group1', 'group2']
 
 # Example of wrong dtype
 test_x.density = test_x.density.astype('int64')
 model.predict(test_x)
-# returns: ValueError: Dtypes must be: {'pH': dtype('float64'), 'density': dtype('float64'), 'chlorides': dtype('float64'), 'alcohol': dtype('float64')}
+# returns: ValueError: Dtypes must be: {'pH': dtype('float64'), 'density': dtype('float64'), 'chlorides': dtype('float64'), 'alcohol': dtype('float64'), 'group1': dtype('int32'), 'group2': dtype('int32')}
+
 ```
 You can get the open api spec for the model in either yaml or as a dictionary, using the record-orientation of pandas.
+The open API spec will have the right types and the enums for the categorical features.
 ```python
 from pprint import pprint
 pprint(model.get_open_api_dict())
@@ -124,6 +137,12 @@ pprint(model.get_open_api_dict())
 #                                                                                        'density': {'format': 'float',
 #                                                                                                    'nullable': False,
 #                                                                                                    'type': 'number'},
+#                                                                                        'group1': {'format': 'integer',
+#                                                                                                   'nullable': False,
+#                                                                                                   'type': 'number'},
+#                                                                                        'group2': {'format': 'integer',
+#                                                                                                   'nullable': False,
+#                                                                                                   'type': 'number'},
 #                                                                                        'pH': {'format': 'float',
 #                                                                                               'nullable': False,
 #                                                                                               'type': 'number'}}},
@@ -145,7 +164,7 @@ pprint(model.get_open_api_dict())
 #  'responses': {200: {'description': 'List of predictions',
 #                      'name': 'predictions',
 #                      'schema': {'$ref': '#/definitions/predictions'}}},
-#  'tags': ['ml_endpoint']}
+#  'tags': ['predict']}
 ```
 
 ## Creating MLFLOW pyfunc model
