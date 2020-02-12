@@ -105,7 +105,8 @@ test_y = test["quality"]
 # Fit model make predictions and evaluate
 features = ["pH", "density", "chlorides", "alcohol", "group1", "group2"]
 model = RandomForestRegressorModel(
-    features=features,
+    features=features,    
+    categorical_columns=["group1", "group2"],
     random_forest_params={'n_estimators': 100, 'max_depth': 15},
 )
 model.fit(train_x, train_y)
@@ -141,10 +142,15 @@ pprint(model.get_open_api_dict())
 #                                                                                        'density': {'format': 'float',
 #                                                                                                    'nullable': False,
 #                                                                                                    'type': 'number'},
-#                                                                                        'group1': {'format': 'integer',
+#                                                                                        'group1': {'enum': [2,
+#                                                                                                            0,
+#                                                                                                            1],
+#                                                                                                   'format': 'integer',
 #                                                                                                   'nullable': False,
 #                                                                                                   'type': 'number'},
-#                                                                                        'group2': {'format': 'integer',
+#                                                                                        'group2': {'enum': [3,
+#                                                                                                            7],
+#                                                                                                   'format': 'integer',
 #                                                                                                   'nullable': False,
 #                                                                                                   'type': 'number'},
 #                                                                                        'pH': {'format': 'float',
