@@ -70,6 +70,9 @@ class BaseModel(metaclass=ABCMeta):
         return model
 
 
+########################################################################################################
+# Decorators to help create models from DataFrameModel class.
+########################################################################################################
 def data_frame_model(cls):
 
     @wraps(cls)
@@ -146,9 +149,7 @@ def data_frame_model(cls):
 
     return wrapper
 
-########################################################################################################
-# Decorators to help create models from DataFrameModel class.
-########################################################################################################
+
 def infer_dataframe_dtypes_from_fit(func):
 
     @wraps(func)
@@ -281,7 +282,7 @@ def validate_prediction_input(func):
 
 
 ########################################################################################################
-#
+# Data frame model that uses seperate model for ecah category of a feature.
 ########################################################################################################
 @data_frame_model
 class FeatureSplitModel(BaseModel):
@@ -296,7 +297,7 @@ class FeatureSplitModel(BaseModel):
     ):
         super().__init__()
         self.features = features
-        self.categorical_columns    = categorical_columns
+        self.categorical_columns = categorical_columns
         self.group_model_dict = group_model_dict
         self.group_column = group_column
 
