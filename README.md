@@ -45,9 +45,9 @@ dummy_model.model_initiated_dt
 loaded_model.predict([[1, 1], [2, 2]])
 ```
 ## Data frame model decorator
-The data frame model decorator is can be used to add some functionality to a model class that takes a Pandas DataFrame as input and produces predictions in the form of a Pandas Series or DataFrame.
-It has some methods for using the features and dtypes of the input dataframe to generate an open api specification.
-The class also needs to set the following attributes in the init method.
+The data frame model decorator can be used to add some functionality to a model class that takes a Pandas DataFrame as input and produces predictions in the form of a Pandas Series or DataFrame.
+It adds methods for using the features and dtypes of the input dataframe to generate an open api specification.
+The class you decorate needs to set the following attributes in the init method.
 - a features attribute (list of feature names)
 - a categorical_columns (list of categorical columns)
 
