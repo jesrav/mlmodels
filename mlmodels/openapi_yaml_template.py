@@ -4,10 +4,6 @@ import yaml
 template_str = """
 tags:
   - predict
-info:
-  title: Prediction open api spec
-  version: 1.0.0
-openapi: 3.0.2
 parameters:
 - in: "body"
   name: "data"
