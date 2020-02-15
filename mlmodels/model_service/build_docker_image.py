@@ -15,8 +15,8 @@ def copy_docker_dir_to_tmp_dir(tmp_dir_path):
 
 def build_model_service_docker_image(
         model_uri,
-        tag,
         model_version,
+        tag,
 ):
 
     with tempfile.TemporaryDirectory() as tmpdirname:
