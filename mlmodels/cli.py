@@ -1,5 +1,5 @@
 import click
-import os
+import logging
 from mlmodels.model_service.build_docker_image import build_model_service_docker_image
 
 
@@ -24,4 +24,6 @@ cli.add_command(dockerize)
 
 
 if __name__ == '__main__':
+    log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    logging.basicConfig(level=logging.INFO, format=log_fmt)
     cli()

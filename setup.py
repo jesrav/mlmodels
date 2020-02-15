@@ -19,7 +19,11 @@ setup(
         'PyYAML',
         'numpy'
     ],
-    package_data={'': ['model_service/Dockerfile', 'model_service/requirements.txt']},
+    package_data={'': [
+        'model_service/Dockerfile',
+        'model_service/requirements.txt',
+        'model_service/app/routes/swagger/*'
+    ]},
     entry_points='''
             [console_scripts]
             mlmodels=mlmodels.cli:cli

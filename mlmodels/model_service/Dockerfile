@@ -30,7 +30,7 @@ COPY config.py /opt/mlflow/config.py
 COPY requirements.txt /opt/mlflow/requirements.txt
 
 # Install model specific dependencies
-RUN pip install awscli
+#RUN pip install awscli
 
 ARG s3_model_uri
 ARG MODEL_VERSION
