@@ -1,0 +1,8 @@
+jsonschema==2.6
+flask
+flasgger
+marshmallow
+apispec
+gunicorn
+python-dotenv
+

@@ -1,0 +1,12 @@
+tags:
+    - model_version
+responses:
+    200:
+        description: Successful operation
+        name: model_version
+        schema:
+            properties:
+                model_version:
+                    type: string
+            example:
+                model_version: '3'
