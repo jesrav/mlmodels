@@ -9,12 +9,12 @@ def cli():
 
 
 @click.command()
-@click.argument("s3_model_uri")
+@click.argument("model_uri")
 @click.argument("model_version")
 @click.argument("tag")
-def dockerize(s3_model_uri, model_version, tag):
+def dockerize(model_uri, model_version, tag):
     build_model_service_docker_image(
-        s3_model_uri,
+        model_uri,
         model_version,
         tag,
     )
