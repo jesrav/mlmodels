@@ -126,57 +126,6 @@ test_x.density = test_x.density.astype('int64')
 model.predict(test_x)
 # returns: ValueError: Dtypes must be: {'pH': dtype('float64'), 'density': dtype('float64'), 'chlorides': dtype('float64'), 'alcohol': dtype('float64'), 'group1': dtype('int32'), 'group2': dtype('int32')}
 
-```
-You can get the open api spec for the model in either yaml or as a dictionary, using the record-orientation of pandas.
-The open API spec will have the right types and the enums for the categorical features.
-```python
-from pprint import pprint
-pprint(model.get_open_api_dict())
-# Returns:
-# {'definitions': {'prediction_input': {'properties': {'data': {'items': {'properties': {'alcohol': {'format': 'float',
-#                                                                                                    'nullable': False,
-#                                                                                                    'type': 'number'},
-#                                                                                        'chlorides': {'format': 'float',
-#                                                                                                      'nullable': False,
-#                                                                                                      'type': 'number'},
-#                                                                                        'density': {'format': 'float',
-#                                                                                                    'nullable': False,
-#                                                                                                    'type': 'number'},
-#                                                                                        'group1': {'enum': [2,
-#                                                                                                            0,
-#                                                                                                            1],
-#                                                                                                   'format': 'integer',
-#                                                                                                   'nullable': False,
-#                                                                                                   'type': 'number'},
-#                                                                                        'group2': {'enum': [3,
-#                                                                                                            7],
-#                                                                                                   'format': 'integer',
-#                                                                                                   'nullable': False,
-#                                                                                                   'type': 'number'},
-#                                                                                        'pH': {'format': 'float',
-#                                                                                               'nullable': False,
-#                                                                                               'type': 'number'}}},
-#                                                               'type': 'array'}},
-#                                       'required': ['data'],
-#                                       'type': 'object'},
-#                  'predictions': {'properties': {'predictions': {'items': {'format': 'integer',
-#                                                                           'nullable': False,
-#                                                                           'type': 'number'},
-#                                                                 'type': 'array'},
-#                                                 'type': 'object'}}},
-#  'info': {'title': 'Prediction open api spec', 'version': '1.0.0'},
-#  'openapi': '3.0.2',
-#  'parameters': [{'description': 'List of feature records.',
-#                  'in': 'body',
-#                  'name': 'data',
-#                  'required': True,
-#                  'schema': {'$ref': '#/definitions/prediction_input'}}],
-#  'responses': {200: {'description': 'List of predictions',
-#                      'name': 'predictions',
-#                      'schema': {'$ref': '#/definitions/predictions'}}},
-#  'tags': ['predict']}
-```
-
 ## Creating MLFLOW pyfunc model
 You can wrap your model with the MLFlowWrapper class, to make your model comply with the mlflow model format.
 ```python
@@ -184,3 +133,26 @@ from mlmodels import MLFlowWrapper
 mlflow_model = MLFlowWrapper(model)
 ```
 
+## Building a docker image with a model service
+The model must wrapped as an mlflow.pyfunc model and must have the following 
+- get_open_api_dict: Method that returns an open api specification as a dictionary.
+- model_input_from_dict: Method that transforms the dictionary model input, from the posted json, to input that can be passed to a predict method.
+- MODEL_NAME: Attribute with a model name.
+- model_initiated_dt: Attribute indicating when the object was initialized (when the model was trained).
+
+The model must return predictions in an array-like form.  
+
+First we train and save a model it localy. The model 
+```console
+python examples\random_forest_model_example\wine_example.py
+```
+Then we build a docker image for serving the model as a web API. 
+```console
+mlmodels dockerize examples\random_forest_model_example\model_output\wine_model 1 model-service:latest
+```
+To run the model service locally
+```console
+docker run -p 5000:5000 model-service:latest
+```
+The swagger specification can be found at http://localhost:5000/apidocs/
+![](docs/swagger_screenshot.jpg)
