@@ -1,4 +1,4 @@
-#WIP
+# WIP
 
 ## Installation
 ```bash
@@ -141,7 +141,6 @@ mlflow_model = MLFlowWrapper(model)
 The model must wrapped as an mlflow.pyfunc model and must have the following 
 - get_open_api_dict: Method that returns an open api specification as a dictionary.
 - model_input_from_dict: Method that transforms the dictionary model input, from the posted json, to input that can be passed to a predict method.
-- MODEL_NAME: Attribute with a model name.
 - model_initiated_dt: Attribute indicating when the object was initialized (when the model was trained).
 
 If you decorated a model class with the data_frame_model decorator, you will automatically have the above.
