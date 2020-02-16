@@ -1,7 +1,6 @@
-# WIP
+#WIP
 
 ## Installation
-To install as package
 ```bash
 pip install git+https://github.com/jesrav/mlmodels#egg=mlmodels
 ```
@@ -9,7 +8,7 @@ To install dependencies for examles
 ```bash
 pip install -r examples/requirements.txt
 ```
-## Base classes for ML models
+## Base class for ML models
 The BaseModel class is an abstract class that enforces child classes to implement
 - A MODEL_NAME attribute
 - A fit method
@@ -46,11 +45,15 @@ loaded_model.predict([[1, 1], [2, 2]])
 ```
 ## Data frame model decorator
 The data frame model decorator can be used to add some functionality to a model class that takes a Pandas DataFrame as input and produces predictions in the form of a Pandas Series or DataFrame.
-It adds methods for using the features and dtypes of the input dataframe to generate an open api specification.
+It adds methods for using the features and dtypes of the input dataframe to:
+- validate the date frame schema when predicting
+- generate an open api specification.
+
 The class you decorate needs to set the following attributes in the init method.
 - a features attribute (list of feature names)
 - a categorical_columns attribute (list of categorical columns)
 
+### Example use
 ```python
 from sklearn.ensemble import RandomForestRegressor
 import pandas as pd
@@ -113,7 +116,7 @@ model.fit(train_x, train_y)
 
 predicted_qualities = model.predict(test_x)
 ```
-### Model input schema
+### Model input schema validation
 If the input dataframe does not have the right features or the columns do not have the right dtypes,
 you will get an error.
 ```python
@@ -125,6 +128,7 @@ model.predict(test_x[["density", "chlorides", "alcohol"]])
 test_x.density = test_x.density.astype('int64')
 model.predict(test_x)
 # returns: ValueError: Dtypes must be: {'pH': dtype('float64'), 'density': dtype('float64'), 'chlorides': dtype('float64'), 'alcohol': dtype('float64'), 'group1': dtype('int32'), 'group2': dtype('int32')}
+```
 
 ## Creating MLFLOW pyfunc model
 You can wrap your model with the MLFlowWrapper class, to make your model comply with the mlflow model format.
@@ -133,16 +137,17 @@ from mlmodels import MLFlowWrapper
 mlflow_model = MLFlowWrapper(model)
 ```
 
-## Building a docker image with a model service
+### Building a docker image with a model service
 The model must wrapped as an mlflow.pyfunc model and must have the following 
 - get_open_api_dict: Method that returns an open api specification as a dictionary.
 - model_input_from_dict: Method that transforms the dictionary model input, from the posted json, to input that can be passed to a predict method.
 - MODEL_NAME: Attribute with a model name.
 - model_initiated_dt: Attribute indicating when the object was initialized (when the model was trained).
 
+If you decorated a model class with the data_frame_model decorator, you will automatically have the above.
 The model must return predictions in an array-like form.  
 
-First we train and save a model it localy. The model 
+First we train and save a model locally.
 ```console
 python examples\random_forest_model_example\wine_example.py
 ```
