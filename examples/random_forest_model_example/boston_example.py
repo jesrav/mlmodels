@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import os
-from dotenv import load_dotenv, find_dotenv
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
