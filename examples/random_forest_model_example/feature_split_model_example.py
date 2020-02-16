@@ -21,7 +21,7 @@ if __name__ == '__main__':
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     code_path = str(dir_path / Path('model_class.py'))
-    model_path = str(dir_path / Path('model'))
+    model_path = str(dir_path / Path('model_output/feature_split_model'))
     conda_env_path = str(dir_path / Path('conda.yaml'))
 
     # Read the wine-quality csv file from the URL
