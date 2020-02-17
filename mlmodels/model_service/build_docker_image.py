@@ -9,6 +9,7 @@ file_dir = os.path.dirname(os.path.realpath(__file__))
 
 model_path = Path('app/model')
 
+
 def copy_docker_dir_to_tmp_dir(tmp_dir_path):
     copy_tree(str(file_dir), tmp_dir_path)
 

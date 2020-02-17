@@ -3,7 +3,6 @@ import os
 import logging
 from flask import Flask
 from flasgger import Swagger
-import mlflow.pyfunc
 # Import blueprints
 from app.routes.predict import prediction_endpoint_bp
 from app.routes.model_train_datetime import model_train_datetime_endpoint_bp
@@ -14,12 +13,14 @@ from config import get_config
 
 swagger = Swagger()
 
+
 def instantiate_ml_model():
     """ This function runs at application startup and loads the ml model"""
     logging.info("Load ml model")
     ml_model = MLModel()
     ml_model.load_model()
     ml_model.set_model_version(os.getenv("MODEL_VERSION"))
+
 
 def create_app(enviroment, model_version):
     logging.info("Init app")
