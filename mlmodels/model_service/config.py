@@ -5,7 +5,10 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config(object):
     DEBUG = False
-
+    SWAGGER = {
+    'title': 'OA3 Callbacks',
+    'openapi': '3.0.2'
+    }
 
 class Development(Config):
     ENVIRONMENT = 'development'
