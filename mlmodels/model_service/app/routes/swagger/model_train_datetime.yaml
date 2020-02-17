@@ -1,0 +1,12 @@
+tags:
+    - model_train_datetime
+responses:
+    200:
+        description: Successful operation
+        name: model_train_datetime
+        schema:
+            properties:
+                model_train_datetime:
+                    type: string
+            example:
+                model_train_datetime: '2020-02-13 08:28:25.657561'
