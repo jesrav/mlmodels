@@ -143,7 +143,7 @@ def data_frame_model(cls):
         # Modify class methods
         cls.fit = infer_category_feature_values_from_fit(cls.fit)
         cls.fit = infer_dataframe_dtypes_from_fit(cls.fit)
-        cls.predict = validate_prediction_input(cls.predict)
+        cls.predict = validate_prediction_input_schema(cls.predict)
 
         return cls(*args, **kws)
 
@@ -248,7 +248,7 @@ def infer_dataframe_features_from_fit(func):
     return wrapper
 
 
-def validate_prediction_input(func):
+def validate_prediction_input_schema(func):
 
     @wraps(func)
     def wrapper(*args):
@@ -280,6 +280,47 @@ def validate_prediction_input(func):
 
     return wrapper
 
+
+def categorical_feature_valid(series, options):
+    return all(series.isin(options))
+
+def get_categorical_features_valid_dict(df, categorical_features, categorical_feature_options):
+    categorical_feature_valid_dict = {
+        categorical_feature: categorical_feature_valid(df[categorical_feature], categorical_feature_options)
+        for categorical_feature in categorical_features
+    }
+    return categorical_feature_valid_dict
+
+def categorical_features_valid(df, categorical_features, categorical_feature_options):
+    categorical_feature_valid_dict = get_categorical_features_valid_dict(df, categorical_features, categorical_feature_options)
+    return all(categorical_feature_valid_dict[k] for k in categorical_feature_valid_dict)
+
+# def validate_prediction_input_category_values(func):
+#
+#     @wraps(func)
+#     def wrapper(*args):
+#         self_var = args[0]
+#         X = args[1]
+#
+#         if isinstance(X, pd.DataFrame) is False:
+#             raise ValueError(
+#                 "X must be a pandas DataFrame."
+#             )
+#
+#         if not categorical_features_valid(X, self_var.categorical_columns, self_var.possible_categorical_column_values):
+#             categorical_feature_valid_dict = get_categorical_features_valid_dict(
+#                 X,
+#                 self_var.categorical_columns,
+#                 self_var.possible_categorical_column_values
+#             )
+#             categorical_features_not_valid_list =
+#
+#             raise ValueError("features attribute must be set. It should be a list of features")
+#
+#         return_values = func(*args)
+#         return return_values
+#
+#     return wrapper
 
 ########################################################################################################
 # Data frame model that uses seperate model for ecah category of a feature.
