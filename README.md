@@ -146,13 +146,13 @@ The model must wrapped as an mlflow.pyfunc model and must have the following
 If you decorated a model class with the data_frame_model decorator, you will automatically have the above.
 The model must return predictions in an array-like form.  
 
-First we train and save a model locally.
+First we train and save a model locally. You need to use python 3.6.7 or update the python version in examples/random_forest_model_example/conda.yaml.
 ```console
-python examples\random_forest_model_example\wine_example.py
+python examples/random_forest_model_example/wine_example.py
 ```
 Then we build a docker image for serving the model as a web API. 
 ```console
-mlmodels dockerize examples\random_forest_model_example\model_output\wine_model 1 model-service:latest
+mlmodels dockerize examples/random_forest_model_example/model_output/wine_model 1 model-service:latest
 ```
 To run the model service locally
 ```console
