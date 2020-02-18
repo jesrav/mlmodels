@@ -1,4 +1,4 @@
+- Target types infered might not be right.
 - Does enums work for target?
 - More informative errors on input schema error.
 - option to infer range of possible values for continous features (with some buffer)
-- swagger not working with FeatureSplitModel
