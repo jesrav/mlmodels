@@ -101,24 +101,29 @@ def data_frame_model(cls):
             np.dtype('O'): {'type': 'string'},
         }
 
-        def get_model_input_record_field_schema(self):
+        def get_model_record_field_schemas(self):
             zipped_feature_dtype_pairs = zip(self.feature_dtypes.index, self.feature_dtypes)
-            return {feature: self.DTYPE_TO_JSON_TYPE_MAP[dtype] for (feature, dtype) in zipped_feature_dtype_pairs}
+            zipped_target_dtype_pairs = zip(self.target_dtypes.index, self.target_dtypes)
+            out_dict = {
+                'features': {feature: self.DTYPE_TO_JSON_TYPE_MAP[dtype] for (feature, dtype) in zipped_feature_dtype_pairs},
+                'targets': {feature: self.DTYPE_TO_JSON_TYPE_MAP[dtype] for (feature, dtype) in zipped_target_dtype_pairs}
+            }
+            return out_dict
 
         def get_open_api_yaml(self):
             return open_api_yaml_specification(
-                model_input_record_field_schema_dict=self.get_model_input_record_field_schema(),
+                model_input_record_field_schema_dict=self.get_model_input_record_field_schema()['features'],
                 possible_categorical_column_values=(self.possible_categorical_column_values or {}),
-                model_target_field_schema_dict=self.DTYPE_TO_JSON_TYPE_MAP[self.target_dtype]
+                model_target_field_schema_dict=self.get_model_input_record_field_schema()['targets']
             )
 
         def get_open_api_dict(self):
             if not hasattr(self, 'possible_categorical_column_values'):
                 self.possible_categorical_column_values = None
             return open_api_dict_specification(
-                model_input_record_field_schema_dict=self.get_model_input_record_field_schema(),
+                model_input_record_field_schema_dict=self.get_model_input_record_field_schema()['features'],
                 possible_categorical_column_values=(self.possible_categorical_column_values or {}),
-                model_target_field_schema_dict=self.DTYPE_TO_JSON_TYPE_MAP[self.target_dtype]
+                model_target_field_schema_dict=self.get_model_input_record_field_schema()['targets']
             )
 
         def convert_model_input_dtypes(self, model_input):
@@ -128,13 +133,34 @@ def data_frame_model(cls):
             return model_input.astype(dtype_dict)
 
         def model_input_from_dict(self, dict_data):
-            """Read data from record type deictionary representation"""
+            """Read data from record type dictionary representation."""
 
             model_input = pd.DataFrame.from_records(dict_data['data'])
             return self.convert_model_input_dtypes(model_input)
 
+        def model_output_to_dict(self, model_predictions):
+            """Transform model predictions to record type dictionary representation."""
+
+            def convert_numpy(numpy_object):
+                if isinstance(numpy_object, np.int64):
+                    return int(numpy_object)
+                elif isinstance(numpy_object, np.int32):
+                    return int(numpy_object)
+                elif isinstance(numpy_object, np.float64):
+                    return float(numpy_object)
+                elif isinstance(numpy_object, np.float32):
+                    return float(numpy_object)
+                raise TypeError
+
+            if isinstance(model_predictions, pd.Series):
+                return model_predictions.to_frame().to_dict(orient='records')
+            elif isinstance(model_predictions, pd.DataFrame):
+                return model_predictions.to_dict(orient='records')
+            else:
+                return {'predictions': model_predictions}
+
         # Set new class methods
-        cls.get_model_input_record_field_schema = get_model_input_record_field_schema
+        cls.get_model_input_record_field_schema = get_model_record_field_schemas
         cls.get_open_api_yaml = get_open_api_yaml
         cls.get_open_api_dict = get_open_api_dict
         cls.convert_model_input_dtypes = convert_model_input_dtypes
@@ -163,9 +189,9 @@ def infer_dataframe_dtypes_from_fit(func):
                 "X must be a pandas DataFrame."
             )
 
-        if isinstance(y, pd.Series) is False:
+        if (isinstance(y, pd.Series) or isinstance(y, pd.DataFrame)) is False:
             raise ValueError(
-                "y must be a pandas Series."
+                "y must be a pandas Series or DataFrame."
             )
 
         if self_var.features is None:
@@ -176,10 +202,15 @@ def infer_dataframe_dtypes_from_fit(func):
         else:
             raise ValueError(f"Dtypes of columns of X must be in {self_var.ACCEPTED_DTYPES}]")
 
-        if y.dtypes in self_var.ACCEPTED_DTYPES:
-            self_var.target_dtype = y.dtypes
+        if isinstance(y, pd.Series):
+            y_dtypes = y.to_frame().dtypes
         else:
-            raise ValueError(f"Dtype of y must be in {self_var.ACCEPTED_DTYPES}]")
+            y_dtypes = y.dtypes
+
+        if all(y_dtypes.isin(self_var.ACCEPTED_DTYPES)):
+            self_var.target_dtypes = y_dtypes
+        else:
+            raise ValueError(f"Dtypes of y must be in {self_var.ACCEPTED_DTYPES}]")
 
         return func(*args)
 
@@ -211,18 +242,25 @@ def infer_category_feature_values_from_fit(func):
             if self_var.features is None:
                 raise ValueError("features attribute must be set. It should be a list of features")
 
-            if not set(self_var.categorical_columns).issubset(set(self_var.features).union(set(y.name))):
+            if not set(self_var.categorical_columns).issubset(set(self_var.features).union({y.name})):
                 raise ValueError("categorical_features must be a subset of the union of features and target name")
 
-            categorical_features = [cat_feat for cat_feat in self_var.categorical_columns if cat_feat in self_var.features]
-            categorical_target = [cat_feat for cat_feat in self_var.categorical_columns if cat_feat == y.name]
+            categorical_features = [
+                cat_feat for cat_feat in self_var.categorical_columns
+                if cat_feat in self_var.features
+            ]
+            categorical_target = [
+                cat_feat for cat_feat in self_var.categorical_columns
+                if cat_feat == y.name
+            ][0]
 
             self_var.possible_categorical_column_values = {
-                categorical_feature: list(X[categorical_feature].unique()) for categorical_feature in categorical_features
+                categorical_feature: list(X[categorical_feature].unique())
+                for categorical_feature in categorical_features
             }
 
             if categorical_target:
-                self_var.possible_categorical_column_values[categorical_target] = list(X[categorical_target].unique())
+                self_var.possible_categorical_column_values[categorical_target] = list(y.unique())
 
             return func(*args)
 
@@ -281,20 +319,22 @@ def validate_prediction_input_schema(func):
     return wrapper
 
 
-def categorical_feature_valid(series, options):
-    return all(series.isin(options))
-
-def get_categorical_features_valid_dict(df, categorical_features, categorical_feature_options):
-    categorical_feature_valid_dict = {
-        categorical_feature: categorical_feature_valid(df[categorical_feature], categorical_feature_options)
-        for categorical_feature in categorical_features
-    }
-    return categorical_feature_valid_dict
-
-def categorical_features_valid(df, categorical_features, categorical_feature_options):
-    categorical_feature_valid_dict = get_categorical_features_valid_dict(df, categorical_features, categorical_feature_options)
-    return all(categorical_feature_valid_dict[k] for k in categorical_feature_valid_dict)
-
+# def categorical_feature_valid(series, options):
+#     return all(series.isin(options))
+#
+#
+# def get_categorical_features_validity_dict(df, categorical_features, categorical_feature_options):
+#     categorical_feature_valid_dict = {
+#         categorical_feature: categorical_feature_valid(df[categorical_feature], categorical_feature_options)
+#         for categorical_feature in categorical_features
+#     }
+#     return categorical_feature_valid_dict
+#
+#
+# def categorical_features_valid(df, categorical_features, categorical_feature_options):
+#     categorical_feature_valid_dict = get_categorical_features_validity_dict(df, categorical_features, categorical_feature_options)
+#     return all(categorical_feature_valid_dict[k] for k in categorical_feature_valid_dict)
+#
 # def validate_prediction_input_category_values(func):
 #
 #     @wraps(func)

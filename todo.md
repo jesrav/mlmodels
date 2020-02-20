@@ -1,4 +1,5 @@
-- Target types infered might not be right.
+- Target types inferred might not be right.
 - Does enums work for target?
 - More informative errors on input schema error.
-- option to infer range of possible values for continous features (with some buffer)
+- option to infer range of possible values for continuous features (with some buffer)
+- 

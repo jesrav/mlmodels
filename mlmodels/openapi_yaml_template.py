@@ -31,17 +31,23 @@ responses:
     content:
       application/json:
         schema:
-            properties:
-              predictions:
-                items:
-                    format: {{target_dict['format']}}
-                    nullable: False
-                    type: {{target_dict['type']}}
-                type: array
-            type: object
+          predictions:
+            items:
+                properties:
+{% for target_col in target_dict %}
+                    {{target_col}}:
+                        format: {{target_dict[target_col]['format']}}
+                        nullable: False
+                        type: {{target_dict[target_col]['type']}}
+    {% if target_col in possible_categorical_column_values %}
+                        enum: {{possible_categorical_column_values[target_col]}}
+    {% endif %}
+{% endfor %}
+            type: array
 tags:
 - predict
 """
+
 
 def open_api_yaml_specification(
         model_input_record_field_schema_dict,
