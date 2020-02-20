@@ -5,6 +5,8 @@ from functools import wraps
 import numpy as np
 import pandas as pd
 import mlflow.pyfunc
+import json
+
 from mlmodels.openapi_yaml_template import open_api_yaml_specification, open_api_dict_specification
 
 
@@ -102,11 +104,9 @@ def data_frame_model(cls):
         }
 
         def get_model_record_field_schemas(self):
-            zipped_feature_dtype_pairs = zip(self.feature_dtypes.index, self.feature_dtypes)
-            zipped_target_dtype_pairs = zip(self.target_dtypes.index, self.target_dtypes)
             out_dict = {
-                'features': {feature: self.DTYPE_TO_JSON_TYPE_MAP[dtype] for (feature, dtype) in zipped_feature_dtype_pairs},
-                'targets': {feature: self.DTYPE_TO_JSON_TYPE_MAP[dtype] for (feature, dtype) in zipped_target_dtype_pairs}
+                'features': self.feature_dtypes.astype(str).apply(lambda x: self.DTYPE_TO_JSON_TYPE_MAP[x]).to_dict(),
+                'targets': self.target_dtypes.astype(str).apply(lambda x: self.DTYPE_TO_JSON_TYPE_MAP[x]).to_dict()
             }
             return out_dict
 
@@ -138,26 +138,29 @@ def data_frame_model(cls):
             model_input = pd.DataFrame.from_records(dict_data['data'])
             return self.convert_model_input_dtypes(model_input)
 
-        def model_output_to_dict(self, model_predictions):
-            """Transform model predictions to record type dictionary representation."""
+        def model_output_to_json(self, model_predictions):
+            """Transform model predictions to record type json representation."""
 
-            def convert_numpy(numpy_object):
-                if isinstance(numpy_object, np.int64):
-                    return int(numpy_object)
-                elif isinstance(numpy_object, np.int32):
-                    return int(numpy_object)
-                elif isinstance(numpy_object, np.float64):
-                    return float(numpy_object)
-                elif isinstance(numpy_object, np.float32):
-                    return float(numpy_object)
-                raise TypeError
+            def convert_numpy(object):
+                if isinstance(object, np.int64):
+                    return int(object)
+                elif isinstance(object, np.int32):
+                    return int(object)
+                elif isinstance(object, np.float64):
+                    return float(object)
+                elif isinstance(object, np.float32):
+                    return float(object)
+                else:
+                    return object
 
             if isinstance(model_predictions, pd.Series):
-                return model_predictions.to_frame().to_dict(orient='records')
+                return model_predictions.to_frame().to_json(orient='records')
             elif isinstance(model_predictions, pd.DataFrame):
                 return model_predictions.to_dict(orient='records')
+            elif isinstance(model_predictions, np.ndarray):
+                return json.dumps({'predictions': model_predictions.tolist()})
             else:
-                return {'predictions': model_predictions}
+                return json.dumps({'predictions': model_predictions})
 
         # Set new class methods
         cls.get_model_input_record_field_schema = get_model_record_field_schemas
@@ -165,6 +168,7 @@ def data_frame_model(cls):
         cls.get_open_api_dict = get_open_api_dict
         cls.convert_model_input_dtypes = convert_model_input_dtypes
         cls.model_input_from_dict = model_input_from_dict
+        cls.model_output_to_json = model_output_to_json
 
         # Modify class methods
         cls.fit = infer_category_feature_values_from_fit(cls.fit)

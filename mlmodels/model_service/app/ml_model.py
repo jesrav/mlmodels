@@ -32,6 +32,6 @@ class MLModel:
             cls.model.python_model.model.model_input_from_dict(data_dict)
         )
 
-        # Return prediction
-        response = {'predictions': list(prediction)}
+        # Return prediction json response
+        response = cls.model.python_model.model.model_output_to_json(prediction)
         return response

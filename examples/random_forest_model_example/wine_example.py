@@ -3,9 +3,9 @@ import numpy as np
 import os
 from pathlib import Path
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 from mlmodels import MLFlowWrapper
-from model_class import RandomForestRegressorModel
+from model_class import RandomForestClassifierModel
 import mlflow.pyfunc
 
 
@@ -41,15 +41,16 @@ if __name__ == '__main__':
     test_y = test["quality"]
 
     # Fit model, make predictions and evaluate
-    model = RandomForestRegressorModel(
+    model = RandomForestClassifierModel(
         features=train_x.columns,
-        categorical_columns=['group1', 'group2'],
+        categorical_columns=['group1', 'group2', 'quality'],
         random_forest_params={'n_estimators': 100, 'max_depth': 15},
     )
     model.fit(train_x, train_y)
 
     predicted_qualities = model.predict(test_x)
 
+    print(predicted_qualities.head())
     (rmse, mae) = eval_metrics(test_y, predicted_qualities)
 
     print("  RMSE: %s" % rmse)

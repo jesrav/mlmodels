@@ -15,5 +15,5 @@ def predict():
     # Get posted input from api call    
     inputs = flask.request.get_json()
     # Make predictions
-    response_json = flask.jsonify(ml_model.predict_from_dict(inputs))
+    response_json = ml_model.predict_from_dict(inputs)
     return response_json
