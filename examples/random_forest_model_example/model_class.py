@@ -5,6 +5,7 @@ from mlmodels import (
     data_frame_model
 )
 
+
 @data_frame_model
 class RandomForestRegressorModel(BaseModel):
     MODEL_NAME = 'Random forest model'

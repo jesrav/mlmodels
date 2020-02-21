@@ -28,9 +28,7 @@ class MLModel:
 
     @classmethod
     def predict_from_dict(cls, data_dict):
-        prediction = cls.model.python_model.model.predict(
-            cls.model.python_model.model.model_input_from_dict(data_dict)
-        )
+        prediction = cls.model.python_model.model.predict(cls.model.python_model.model.model_input_from_dict(data_dict))
 
         # Return prediction json response
         response = cls.model.python_model.model.model_output_to_json(prediction)
