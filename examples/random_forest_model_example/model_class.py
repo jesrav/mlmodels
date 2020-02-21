@@ -2,12 +2,15 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 import pandas as pd
 from mlmodels import (
     BaseModel,
-    data_frame_model
+    DataFrameModel,
+    infer_category_feature_values_from_fit,
+    infer_feature_dtypes_from_fit,
+    infer_target_dtypes_from_fit,
+    validate_prediction_input_schema,
 )
 
 
-@data_frame_model
-class RandomForestRegressorModel(BaseModel):
+class RandomForestRegressorModel(BaseModel, DataFrameModel):
     MODEL_NAME = 'Random forest model'
 
     def __init__(
@@ -22,17 +25,20 @@ class RandomForestRegressorModel(BaseModel):
         self.random_forest_params = random_forest_params
         self.model = RandomForestRegressor(**random_forest_params)
 
+    @infer_category_feature_values_from_fit
+    @infer_feature_dtypes_from_fit
+    @infer_target_dtypes_from_fit
     def fit(self, X, y):
         self.model.fit(X[self.features], y)
         return self
 
+    @validate_prediction_input_schema
     def predict(self, X):
         predictions = self.model.predict(X[self.features])
         return predictions
 
 
-@data_frame_model
-class RandomForestClassifierModel(BaseModel):
+class RandomForestClassifierModel(BaseModel, DataFrameModel):
     MODEL_NAME = 'Random forest model'
 
     def __init__(
@@ -47,11 +53,15 @@ class RandomForestClassifierModel(BaseModel):
         self.random_forest_params = random_forest_params
         self.model = RandomForestClassifier(**random_forest_params)
 
+    @infer_category_feature_values_from_fit
+    @infer_feature_dtypes_from_fit
+    @infer_target_dtypes_from_fit
     def fit(self, X, y):
         self.model.fit(X[self.features], y)
         self.target_name = y.name
         return self
 
+    @validate_prediction_input_schema
     def predict(self, X):
         predictions_array = self.model.predict(X[self.features])
         predictions_series = pd.Series(data=predictions_array, name=self.target_name)
