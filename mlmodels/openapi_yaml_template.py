@@ -53,6 +53,19 @@ def open_api_yaml_specification(
         model_input_record_field_schema_dict,
         possible_categorical_column_values,
         model_target_field_schema_dict):
+    """Get open API spec for model from template in a YAML representation.
+
+    Parameters
+    ----------
+    model_input_record_field_schema_dict: dict
+    possible_categorical_column_values: dict
+    model_target_field_schema_dict: dict
+
+    Returns
+    -------
+    str
+        YAML representation of the open API spec for the the model predictions.
+    """
     t = Template(template_str)
     return t.render(
         feature_dict=model_input_record_field_schema_dict,
@@ -65,6 +78,19 @@ def open_api_dict_specification(
         possible_categorical_column_values,
         model_target_field_schema_dict,
 ):
+    """Get open API spec for model from template in a dictionary representation.
+
+    Parameters
+    ----------
+    model_input_record_field_schema_dict: dict
+    possible_categorical_column_values: dict
+    model_target_field_schema_dict: dict
+
+    Returns
+    -------
+    str
+        Dictionary representation of the open API spec for the the model predictions.
+    """
     return yaml.safe_load(open_api_yaml_specification(
         model_input_record_field_schema_dict,
         possible_categorical_column_values,

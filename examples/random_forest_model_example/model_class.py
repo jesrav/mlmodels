@@ -3,7 +3,7 @@ import pandas as pd
 from mlmodels import (
     BaseModel,
     DataFrameModel,
-    infer_category_feature_values_from_fit,
+    infer_category_values_from_fit,
     infer_feature_dtypes_from_fit,
     infer_target_dtypes_from_fit,
     validate_prediction_input_schema,
@@ -25,7 +25,7 @@ class RandomForestRegressorModel(BaseModel, DataFrameModel):
         self.random_forest_params = random_forest_params
         self.model = RandomForestRegressor(**random_forest_params)
 
-    @infer_category_feature_values_from_fit
+    @infer_category_values_from_fit
     @infer_feature_dtypes_from_fit
     @infer_target_dtypes_from_fit
     def fit(self, X, y):
@@ -53,7 +53,7 @@ class RandomForestClassifierModel(BaseModel, DataFrameModel):
         self.random_forest_params = random_forest_params
         self.model = RandomForestClassifier(**random_forest_params)
 
-    @infer_category_feature_values_from_fit
+    @infer_category_values_from_fit
     @infer_feature_dtypes_from_fit
     @infer_target_dtypes_from_fit
     def fit(self, X, y):
