@@ -1,7 +1,9 @@
+from typing import List
 from functools import wraps
 import numpy as np
 import pandas as pd
 import mlflow.pyfunc
+import pandera as pa
 
 from mlmodels.base_classes import BaseModel
 from mlmodels.openapi_yaml_template import open_api_yaml_specification, open_api_dict_specification
@@ -10,6 +12,116 @@ from mlmodels.openapi_yaml_template import open_api_yaml_specification, open_api
 ########################################################################################################
 # Data frame model class
 ########################################################################################################
+_ACCEPTED_DTYPES = (
+    'int64',
+    'int32',
+    'float64',
+    'float32',
+    'O',
+    'string',
+)
+
+_dtype_to_pandera_map = {
+    'int64': pa.Int,
+    'int32': pa.Int,
+    'float64': pa.Float,
+    'float32': pa.Float,
+    'O': pa.String,
+    'string': pa.String,
+}
+
+def _validate_name(name):
+    if not isinstance(name, str):
+        raise TypeError('name must be string.')
+
+def _validate_dtype(dtype):
+    if not isinstance(dtype, str):
+        raise TypeError('dtype must be string.')
+    if not dtype in _ACCEPTED_DTYPES:
+        raise ValueError(f'dtype must be one of the accepted dtypes: {_ACCEPTED_DTYPES}')
+
+def _validate_enum(enum):
+    if not isinstance(enum, list):
+        raise TypeError('enum must be list.')
+
+def _validate_column_input(name, dtype, enum):
+    _validate_name(name)
+    _validate_dtype(dtype)
+    _validate_enum(enum)
+
+
+class Column:
+
+    def __init__(self, name: str, dtype: str, enum:List = []):
+
+        _validate_column_input(name, dtype, enum)
+
+        self.name = name
+        self.dtype = dtype
+        self.enum = enum
+
+    def update_enum(self, enum):
+        _validate_enum(enum)
+        self.enum = enum
+
+    def __repr__(self):
+        return f'Column{{name: {self.name}, dtype: {self.dtype}, enum: {self.enum}}}'
+
+
+def _pandera_data_frame_schema_from_columns(columns:List):
+
+    data_frame_schema_dict = {}
+    for col in columns:
+        if col.enum:
+            data_frame_schema_dict[col.name] = pa.Column(
+                _dtype_to_pandera_map[col.dtype],
+                pa.Check.isin(col.enum)
+            )
+        else:
+            data_frame_schema_dict[col.name] = pa.Column(
+                _dtype_to_pandera_map[col.dtype]
+            )
+    return pa.DataFrameSchema(data_frame_schema_dict)
+
+# test_col = Column('test', 'int64', [1, 4, 0, 10])
+# schema = _pandera_data_frame_schema_from_columns([test_col])
+#
+# df = pd.DataFrame({
+#     "test": [1, 4, 0, 10],
+# })
+#
+# schema.validate(df)
+
+
+class DataFrameSchema:
+
+    def __init__(self, columns: list):
+        self.columns = columns
+        self._data_frame_schema = _pandera_data_frame_schema_from_columns(columns)
+
+    def validate(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Validate pandas data frame
+
+        Parameters
+        ----------
+        df: pandas DataFrame
+
+        Raises:
+        -------
+        SchemaError
+            If df does not conform to the schema, a schema error is raised.
+
+        Returns
+        -------
+        DataFrame
+            Validated data frame
+        """
+        return self._data_frame_schema.validate(df)
+
+    def __repr__(self):
+        return f'DataFrameSchema{{columns: {self.columns}}}'
+
+
 class DataFrameModel:
     """Data frame model class
 
@@ -54,6 +166,7 @@ class DataFrameModel:
                     'hej': np.dtype('int64'),
                     'nej': np.dtype('int32'),
         }
+
         model.set_feature_dtypes(dtype_dict)
         """
 
@@ -91,6 +204,7 @@ class DataFrameModel:
                     'hej': np.dtype('int64'),
                     'nej': np.dtype('int32'),
         }
+
         model.set_target_dtypes(dtype_dict)
         """
 
@@ -354,6 +468,20 @@ def validate_prediction_input_schema(func):
 
     return wrapper
 
+
+def data_frame_model(cls):
+
+    @wraps(cls)
+    def wrapper(*args, **kws):
+
+        # Modify class methods
+        cls.fit = infer_category_values_from_fit(cls.fit)
+        cls.fit = infer_feature_dtypes_from_fit(cls.fit)
+        cls.predict = validate_prediction_input_schema(cls.predict)
+
+        return cls(*args, **kws)
+
+    return wrapper
 
 # def categorical_feature_valid(series, options):
 #     return all(series.isin(options))
