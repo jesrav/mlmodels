@@ -1,4 +1,6 @@
+from typing import Dict
 from pathlib import Path
+import pandas as pd
 import mlflow.pyfunc
 
 
@@ -27,9 +29,53 @@ class MLModel:
         return cls.model_initiated_dt
 
     @classmethod
+    def model_input_from_dict(cls, model_input_dict: Dict) -> pd.DataFrame:
+        """Read data from record type dictionary representation.
+
+        Parameters
+        ----------
+        model_input_dict: dict
+            dictionary with the data frame data in a record type representation.
+
+        Returns
+        -------
+        pandas DataFrame
+            Data frame with model input.
+        """
+
+        model_input = pd.DataFrame.from_records(model_input_dict['data'])
+        return cls.model.python_model.model.validate(model_input)
+
+    @staticmethod
+    def model_output_to_json(model_predictions: pd.DataFrame) -> str:
+        """Transform model predictions to record type json representation.
+
+        Parameters
+        ----------
+        model_predictions
+
+        Raises
+        ------
+        TypeError
+            If model_predictions is not a pandas Series or DataFrame
+
+        Returns
+        -------
+        str
+            String with json representation of model predictions
+        """
+
+        if not isinstance(model_predictions, pd.DataFrame):
+            raise TypeError('model_predictions must be a pandas DataFrame')
+
+        return model_predictions.to_dict(orient='records')
+
+    @classmethod
     def predict_from_dict(cls, data_dict):
-        prediction = cls.model.python_model.model.predict(cls.model.python_model.model.model_input_from_dict(data_dict))
+        prediction = cls.model.python_model.model.predict(cls.model_input_from_dict(data_dict))
 
         # Return prediction json response
-        response = cls.model.python_model.model.model_output_to_json(prediction)
+        response = cls.model_output_to_json(prediction)
         return response
+
+

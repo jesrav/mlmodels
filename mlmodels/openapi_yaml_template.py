@@ -1,5 +1,14 @@
 from jinja2 import Template
 import yaml
+from mlmodels.data_frame_model import DataFrameSchema
+
+_DTYPE_TO_JSON_TYPE_MAP = {
+    'int64': {'type': 'number', 'format': 'integer'},
+    'int32': {'type': 'number', 'format': 'integer'},
+    'float64': {'type': 'number', 'format': 'float'},
+    'float32': {'type': 'number', 'format': 'float'},
+    'O': {'type': 'string'},
+}
 
 template_str = """
 requestBody:
@@ -16,8 +25,8 @@ requestBody:
                     format: {{feature_dict[feat]['format']}}
                     nullable: False
                     type: {{feature_dict[feat]['type']}}
-    {% if feat in possible_categorical_column_values %}
-                    enum: {{possible_categorical_column_values[feat]}}
+    {% {feature_dict[feat]['enum'] %}
+                    enum: {{feature_dict[feat]['enum']}}
     {% endif %}
 {% endfor %}
             type: array
@@ -39,8 +48,8 @@ responses:
                         format: {{target_dict[target_col]['format']}}
                         nullable: False
                         type: {{target_dict[target_col]['type']}}
-    {% if target_col in possible_categorical_column_values %}
-                        enum: {{possible_categorical_column_values[target_col]}}
+    {% {target_dict[feat]['enum'] %}
+                    enum: {{target_dict[feat]['enum']}}
     {% endif %}
 {% endfor %}
             type: array
@@ -49,50 +58,55 @@ tags:
 """
 
 
+def _data_frame_schema_to_dict(data_frame_schema):
+    dict_ = {col.name: _DTYPE_TO_JSON_TYPE_MAP[col.dtype] for col in data_frame_schema.columns}
+    for col in data_frame_schema.columns:
+        dict_[col.name].update(enum=col.enum)
+    return dict_
+
+
 def open_api_yaml_specification(
-        model_input_record_field_schema_dict,
-        possible_categorical_column_values,
-        model_target_field_schema_dict):
+    feature_df_schema: DataFrameSchema,
+    target_df_schema: DataFrameSchema,
+) -> str:
     """Get open API spec for model from template in a YAML representation.
 
     Parameters
     ----------
-    model_input_record_field_schema_dict: dict
-    possible_categorical_column_values: dict
-    model_target_field_schema_dict: dict
+    feature_df_schema: DataFrameSchema
+    target_df_schema: DataFrameSchema
 
     Returns
     -------
     str
         YAML representation of the open API spec for the the model predictions.
     """
+
     t = Template(template_str)
     return t.render(
-        feature_dict=model_input_record_field_schema_dict,
-        possible_categorical_column_values=possible_categorical_column_values,
-        target_dict=model_target_field_schema_dict)
+        feature_dict=_data_frame_schema_to_dict(feature_df_schema),
+        target_dict=_data_frame_schema_to_dict(target_df_schema),
+    )
 
 
 def open_api_dict_specification(
-        model_input_record_field_schema_dict,
-        possible_categorical_column_values,
-        model_target_field_schema_dict,
-):
-    """Get open API spec for model from template in a dictionary representation.
+        feature_df_schema: DataFrameSchema,
+        target_df_schema: DataFrameSchema,
+) -> str:
+    """Get open API spec for model from template in a YAML representation.
 
     Parameters
     ----------
-    model_input_record_field_schema_dict: dict
-    possible_categorical_column_values: dict
-    model_target_field_schema_dict: dict
+    feature_df_schema: DataFrameSchema
+    target_df_schema: DataFrameSchema
 
     Returns
     -------
-    str
+    dict
         Dictionary representation of the open API spec for the the model predictions.
     """
+
     return yaml.safe_load(open_api_yaml_specification(
-        model_input_record_field_schema_dict,
-        possible_categorical_column_values,
-        model_target_field_schema_dict,
+        feature_df_schema,
+        target_df_schema
     ))

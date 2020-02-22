@@ -11,7 +11,7 @@ from .data_frame_model import (
     infer_target_dtypes_from_fit,
     infer_dataframe_features_from_fit,
     infer_category_values_from_fit,
-    validate_prediction_input_schema,
+    validate_prediction_input_and_output,
 )
 
 

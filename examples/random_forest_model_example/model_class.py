@@ -6,7 +6,7 @@ from mlmodels import (
     infer_category_values_from_fit,
     infer_feature_dtypes_from_fit,
     infer_target_dtypes_from_fit,
-    validate_prediction_input_schema,
+    validate_prediction_input_and_output,
 )
 
 
@@ -32,7 +32,7 @@ class RandomForestRegressorModel(BaseModel, DataFrameModel):
         self.model.fit(X[self.features], y)
         return self
 
-    @validate_prediction_input_schema
+    @validate_prediction_input_and_output
     def predict(self, X):
         predictions = self.model.predict(X[self.features])
         return predictions
@@ -61,7 +61,7 @@ class RandomForestClassifierModel(BaseModel, DataFrameModel):
         self.target_name = y.name
         return self
 
-    @validate_prediction_input_schema
+    @validate_prediction_input_and_output
     def predict(self, X):
         predictions_array = self.model.predict(X[self.features])
         predictions_series = pd.Series(data=predictions_array, name=self.target_name)
