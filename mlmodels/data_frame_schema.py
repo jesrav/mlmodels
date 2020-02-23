@@ -2,23 +2,16 @@ from typing import List
 import pandas as pd
 import pandera as pa
 
-########################################################################################################
-# Data frame model class
-########################################################################################################
 _ACCEPTED_DTYPES = (
     'int64',
-    'int32',
     'float64',
-    'float32',
     'object',
     'string',
 )
 
 _dtype_to_pandera_map = {
     'int64': pa.Int,
-    'int32': pa.Int,
     'float64': pa.Float,
-    'float32': pa.Float,
     'object': pa.String,
     'string': pa.String,
 }
@@ -65,7 +58,7 @@ class Column:
         return f'Column{{name: {self.name}, dtype: {self.dtype}, enum: {self.enum}}}'
 
 
-def _pandera_data_frame_schema_from_columns(columns:List):
+def _pandera_data_frame_schema_from_columns(columns:List) -> pa.DataFrameSchema:
 
     data_frame_schema_dict = {}
     for col in columns:

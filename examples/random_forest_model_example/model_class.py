@@ -2,14 +2,14 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 import pandas as pd
 from mlmodels import (
     BaseModel,
-    DataFrameModel,
+    DataFrameModelMixin,
     infer_feature_df_schema_from_fit,
     infer_target_df_schema_from_fit,
     validate_prediction_input_and_output,
 )
 
 
-class RandomForestRegressorModel(BaseModel, DataFrameModel):
+class RandomForestRegressorModel(BaseModel, DataFrameModelMixin):
     MODEL_NAME = 'Random forest model'
 
     def __init__(
@@ -37,7 +37,7 @@ class RandomForestRegressorModel(BaseModel, DataFrameModel):
         return predictions_series
 
 
-class RandomForestClassifierModel(BaseModel, DataFrameModel):
+class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
     MODEL_NAME = 'Random forest model'
 
     def __init__(

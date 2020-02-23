@@ -28,8 +28,10 @@ if __name__ == '__main__':
     data = pd.read_csv(csv_url, sep=';')
 
     # Create 3 randomly assigned groups
-    # data['group1'] = np.random.choice(3, len(data))
-    # data['group2'] = np.random.choice([3, 7], len(data))
+    data['group1'] = np.random.choice(3, len(data))
+    data['group2'] = np.random.choice([3, 7], len(data))
+    data['group1'] = data['group1'].astype('int64')
+    data['group2'] = data['group2'].astype('int64')
 
     # Split the data into training and test sets. (0.75, 0.25) split.
     train, test = train_test_split(data)

@@ -8,17 +8,14 @@ from mlmodels.openapi_yaml_template import open_api_yaml_specification, open_api
 
 
 ########################################################################################################
-# Data frame model class
+# Data frame model mixin class
 ########################################################################################################
-class DataFrameModel:
+class DataFrameModelMixin:
     """Data frame model class
 
-    The data frame model class can be used to add functionality to a model class that takes a
-    Pandas DataFrame as input and produces predictions in the form of a Pandas Series or DataFrame.
+    The data frame model mixin class can be used to add functionality to a model class that takes a
+    Pandas DataFrame as input and produces predictions in the form of a Pandas DataFrame.
     """
-    def __init__(self):
-        self.feature_df_schema=None
-        self.target_df_schema=None
 
     def set_feature_df_schema(self, feature_df_schema:DataFrameSchema):
         self.feature_df_schema = feature_df_schema
@@ -172,26 +169,23 @@ def validate_prediction_input_and_output(func):
 ########################################################################################################
 # Data frame model that uses separate model for each category of a feature.
 ########################################################################################################
-class FeatureSplitModel(BaseModel, DataFrameModel):
+class FeatureSplitModel(BaseModel, DataFrameModelMixin):
     MODEL_NAME = 'Feature split meta model'
 
     def __init__(
             self,
             features=None,
-            categorical_columns=None,
             group_column=None,
             group_model_dict=None
     ):
         super().__init__()
         self.features = features
-        self.categorical_columns = categorical_columns
         self.group_model_dict = group_model_dict
         self.group_column = group_column
 
     @infer_target_df_schema_from_fit
     @infer_target_df_schema_from_fit
     def fit(self, X, y):
-        assert isinstance(X, pd.DataFrame), "X must be a Pandas data frame"
         assert X.shape[0] == y.shape[0], "X and y must have same number of rows"
         assert self.group_column in X.columns, f"{self.group_column} must be a columns in X"
 
@@ -209,7 +203,7 @@ class FeatureSplitModel(BaseModel, DataFrameModel):
             mask = (X[self.group_column] == group)
             X.loc[mask, 'prediction'] = self.group_model_dict[group].predict(X[mask])
 
-        return X['prediction'].values
+        return X[['prediction']]
 
 
 # ########################################################################################################

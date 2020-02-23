@@ -1,5 +1,6 @@
 from jinja2 import Template
 import yaml
+from collections import namedtuple
 from mlmodels.data_frame_schema import DataFrameSchema
 
 _DTYPE_TO_JSON_TYPE_MAP = {
@@ -20,13 +21,13 @@ requestBody:
           data:
             items:
               properties:
-{% for feat in feature_dict %}
-                {{feat}}:
-                    format: {{feature_dict[feat]['format']}}
+{% for feat in feature_openapi_named_tuple %}
+                {{ feat.name }}:
+                    format: {{ feat.format }}
                     nullable: False
-                    type: {{feature_dict[feat]['type']}}
-    {% {feature_dict[feat]['enum'] %}
-                    enum: {{feature_dict[feat]['enum']}}
+                    type: {{ feat.type }}
+    {% if feat.enum %}
+                    enum: {{ feat.enum }}
     {% endif %}
 {% endfor %}
             type: array
@@ -43,13 +44,13 @@ responses:
           predictions:
             items:
                 properties:
-{% for target_col in target_dict %}
-                    {{target_col}}:
-                        format: {{target_dict[target_col]['format']}}
+{% for target in target_openapi_named_tuple %}
+                    {{ target.name }}:
+                        format: {{ target.format }}
                         nullable: False
-                        type: {{target_dict[target_col]['type']}}
-    {% {target_dict[feat]['enum'] %}
-                    enum: {{target_dict[feat]['enum']}}
+                        type: {{ target.type }}
+    {% if target.enum %}
+                    enum: {{ target.enum }}
     {% endif %}
 {% endfor %}
             type: array
@@ -57,12 +58,21 @@ tags:
 - predict
 """
 
+# Named tuple to render data frame column in jinja
+OpenAPICol = namedtuple("OpenAPICol", ["name", "format", "type", 'enum'])
 
-def _data_frame_schema_to_dict(data_frame_schema):
-    dict_ = {col.name: _DTYPE_TO_JSON_TYPE_MAP[col.dtype] for col in data_frame_schema.columns}
-    for col in data_frame_schema.columns:
-        dict_[col.name].update(enum=col.enum)
-    return dict_
+
+def _data_frame_schema_to_open_api_cols(data_frame_schema):
+    open_api_cols = [
+        OpenAPICol(
+            name=col.name,
+            format=_DTYPE_TO_JSON_TYPE_MAP[col.dtype]['format'],
+            type=_DTYPE_TO_JSON_TYPE_MAP[col.dtype]['type'],
+            enum=col.enum,
+        )
+        for col in data_frame_schema.columns
+    ]
+    return open_api_cols
 
 
 def open_api_yaml_specification(
@@ -84,8 +94,8 @@ def open_api_yaml_specification(
 
     t = Template(template_str)
     return t.render(
-        feature_dict=_data_frame_schema_to_dict(feature_df_schema),
-        target_dict=_data_frame_schema_to_dict(target_df_schema),
+        feature_openapi_named_tuple=_data_frame_schema_to_open_api_cols(feature_df_schema),
+        target_openapi_named_tuple=_data_frame_schema_to_open_api_cols(target_df_schema),
     )
 
 
