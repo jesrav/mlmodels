@@ -1,10 +1,8 @@
-from typing import List, Dict
 from functools import wraps
-import numpy as np
 import pandas as pd
 import mlflow.pyfunc
-import pandera as pa
 
+from mlmodels.data_frame_schema import DataFrameSchema, _infer_data_frame_schema_from_df
 from mlmodels.base_classes import BaseModel
 from mlmodels.openapi_yaml_template import open_api_yaml_specification, open_api_dict_specification
 
@@ -12,123 +10,6 @@ from mlmodels.openapi_yaml_template import open_api_yaml_specification, open_api
 ########################################################################################################
 # Data frame model class
 ########################################################################################################
-_ACCEPTED_DTYPES = (
-    'int64',
-    'int32',
-    'float64',
-    'float32',
-    'object',
-    'string',
-)
-
-_dtype_to_pandera_map = {
-    'int64': pa.Int,
-    'int32': pa.Int,
-    'float64': pa.Float,
-    'float32': pa.Float,
-    'object': pa.String,
-    'string': pa.String,
-}
-
-
-def _validate_name(name):
-    if not isinstance(name, str):
-        raise TypeError('name must be string.')
-
-
-def _validate_dtype(dtype):
-    if not isinstance(dtype, str):
-        raise TypeError('dtype must be string.')
-    if not dtype in _ACCEPTED_DTYPES:
-        raise ValueError(f'dtype must be one of the accepted dtypes: {_ACCEPTED_DTYPES}')
-
-
-def _validate_enum(enum):
-    if not isinstance(enum, list):
-        raise TypeError('enum must be list.')
-
-
-def _validate_column_input(name, dtype, enum):
-    _validate_name(name)
-    _validate_dtype(dtype)
-    _validate_enum(enum)
-
-
-class Column:
-
-    def __init__(self, name: str, dtype: str, enum:List = []):
-
-        _validate_column_input(name, dtype, enum)
-
-        self.name = name
-        self.dtype = dtype
-        self.enum = enum
-
-    def update_enum(self, enum):
-        _validate_enum(enum)
-        self.enum = enum
-
-    def __repr__(self):
-        return f'Column{{name: {self.name}, dtype: {self.dtype}, enum: {self.enum}}}'
-
-
-def _pandera_data_frame_schema_from_columns(columns:List):
-
-    data_frame_schema_dict = {}
-    for col in columns:
-        if col.enum:
-            data_frame_schema_dict[col.name] = pa.Column(
-                _dtype_to_pandera_map[col.dtype],
-                pa.Check.isin(col.enum)
-            )
-        else:
-            data_frame_schema_dict[col.name] = pa.Column(
-                _dtype_to_pandera_map[col.dtype]
-            )
-    return pa.DataFrameSchema(data_frame_schema_dict)
-
-
-class DataFrameSchema:
-
-    def __init__(self, columns: list):
-        self.columns = columns
-        self._data_frame_schema = _pandera_data_frame_schema_from_columns(columns)
-
-    def validate(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Validate pandas data frame
-
-        Parameters
-        ----------
-        df: pandas DataFrame
-
-        Raises:
-        -------
-        SchemaError
-            If df does not conform to the schema, a schema error is raised.
-
-        Returns
-        -------
-        DataFrame
-            Validated data frame
-        """
-        return self._data_frame_schema.validate(df)
-
-    def __repr__(self):
-        return f'DataFrameSchema{{columns: {self.columns}}}'
-
-
-df = pd.DataFrame({
-    "column1": [1, 4, 0, 10, 9],
-    "column2": [-1.3, -1.4, -2.9, -10.1, -20.4],
-    "column3": ["value_1", "value_2", "value_3", "value_2", "value_1"]
-})
-
-
-def _infer_data_frame_schema(df: pd.DataFrame) -> DataFrameSchema:
-    dtype_dict = df.dtypes.astype(str).to_dict()
-    return DataFrameSchema([Column(k, dtype_dict[k]) for k in dtype_dict])
-
-
 class DataFrameModel:
     """Data frame model class
 
@@ -188,14 +69,14 @@ def infer_feature_df_schema_from_fit(func):
                 "X must be a pandas DataFrame."
             )
 
-        self_var.feature_df_schema = _infer_data_frame_schema(X)
+        self_var.feature_df_schema = _infer_data_frame_schema_from_df(X)
 
         return func(*args)
 
     return wrapper
 
 
-def infer_target_dtypes_from_fit(func):
+def infer_target_df_schema_from_fit(func):
 
     @wraps(func)
     def wrapper(*args):
@@ -208,7 +89,7 @@ def infer_target_dtypes_from_fit(func):
                 "y must be a pandas DataFrame."
             )
 
-        self_var.target_df_schema = _infer_data_frame_schema(y)
+        self_var.target_df_schema = _infer_data_frame_schema_from_df(y)
 
         return func(*args)
 
@@ -307,9 +188,8 @@ class FeatureSplitModel(BaseModel, DataFrameModel):
         self.group_model_dict = group_model_dict
         self.group_column = group_column
 
-    @infer_category_values_from_fit
-    @infer_target_dtypes_from_fit
-    @infer_target_dtypes_from_fit
+    @infer_target_df_schema_from_fit
+    @infer_target_df_schema_from_fit
     def fit(self, X, y):
         assert isinstance(X, pd.DataFrame), "X must be a Pandas data frame"
         assert X.shape[0] == y.shape[0], "X and y must have same number of rows"

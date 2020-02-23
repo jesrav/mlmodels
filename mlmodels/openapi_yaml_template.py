@@ -1,6 +1,6 @@
 from jinja2 import Template
 import yaml
-from mlmodels.data_frame_model import DataFrameSchema
+from mlmodels.data_frame_schema import DataFrameSchema
 
 _DTYPE_TO_JSON_TYPE_MAP = {
     'int64': {'type': 'number', 'format': 'integer'},

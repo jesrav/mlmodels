@@ -28,8 +28,8 @@ if __name__ == '__main__':
     data = pd.read_csv(csv_url, sep=';')
 
     # Create 3 randomly assigned groups
-    data['group1'] = np.random.choice(3, len(data))
-    data['group2'] = np.random.choice([3, 7], len(data))
+    # data['group1'] = np.random.choice(3, len(data))
+    # data['group2'] = np.random.choice([3, 7], len(data))
 
     # Split the data into training and test sets. (0.75, 0.25) split.
     train, test = train_test_split(data)
@@ -37,16 +37,16 @@ if __name__ == '__main__':
     # The predicted column is "quality" which is a scalar from [3, 9]
     train_x = train.drop(["quality"], axis=1)
     test_x = test.drop(["quality"], axis=1)
-    train_y = train["quality"]
-    test_y = test["quality"]
+    train_y = train[["quality"]]
+    test_y = test[["quality"]]
 
     # Fit model, make predictions and evaluate
     model = RandomForestClassifierModel(
         features=train_x.columns,
-        categorical_columns=['group1', 'group2', 'quality'],
         random_forest_params={'n_estimators': 100, 'max_depth': 15},
     )
     model.fit(train_x, train_y)
+
 
     predicted_qualities = model.predict(test_x)
 

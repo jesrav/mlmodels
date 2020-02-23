@@ -3,9 +3,8 @@ import pandas as pd
 from mlmodels import (
     BaseModel,
     DataFrameModel,
-    infer_category_values_from_fit,
-    infer_feature_dtypes_from_fit,
-    infer_target_dtypes_from_fit,
+    infer_feature_df_schema_from_fit,
+    infer_target_df_schema_from_fit,
     validate_prediction_input_and_output,
 )
 
@@ -16,26 +15,26 @@ class RandomForestRegressorModel(BaseModel, DataFrameModel):
     def __init__(
             self,
             features,
-            categorical_columns=None,
             random_forest_params={'n_estimators': 100, 'max_depth': 30},
     ):
         super().__init__()
         self.features = features
-        self.categorical_columns = categorical_columns
+        self.target_columns = None
         self.random_forest_params = random_forest_params
         self.model = RandomForestRegressor(**random_forest_params)
 
-    @infer_category_values_from_fit
-    @infer_feature_dtypes_from_fit
-    @infer_target_dtypes_from_fit
+    @infer_feature_df_schema_from_fit
+    @infer_target_df_schema_from_fit
     def fit(self, X, y):
         self.model.fit(X[self.features], y)
+        self.target_columns = y.columns
         return self
 
     @validate_prediction_input_and_output
     def predict(self, X):
-        predictions = self.model.predict(X[self.features])
-        return predictions
+        predictions_array = self.model.predict(X[self.features])
+        predictions_series = pd.DataFrame(data=predictions_array, columns=self.target_columns)
+        return predictions_series
 
 
 class RandomForestClassifierModel(BaseModel, DataFrameModel):
@@ -44,25 +43,23 @@ class RandomForestClassifierModel(BaseModel, DataFrameModel):
     def __init__(
             self,
             features,
-            categorical_columns=None,
             random_forest_params={'n_estimators': 100, 'max_depth': 30},
     ):
         super().__init__()
         self.features = features
-        self.categorical_columns = categorical_columns
+        self.target_columns = None,
         self.random_forest_params = random_forest_params
         self.model = RandomForestClassifier(**random_forest_params)
 
-    @infer_category_values_from_fit
-    @infer_feature_dtypes_from_fit
-    @infer_target_dtypes_from_fit
+    @infer_feature_df_schema_from_fit
+    @infer_target_df_schema_from_fit
     def fit(self, X, y):
         self.model.fit(X[self.features], y)
-        self.target_name = y.name
+        self.target_columns = y.columns
         return self
 
     @validate_prediction_input_and_output
     def predict(self, X):
         predictions_array = self.model.predict(X[self.features])
-        predictions_series = pd.Series(data=predictions_array, name=self.target_name)
+        predictions_series = pd.DataFrame(data=predictions_array, columns=self.target_columns)
         return predictions_series
