@@ -44,7 +44,7 @@ class MLModel:
         """
 
         model_input = pd.DataFrame.from_records(model_input_dict['data'])
-        return cls.model.python_model.model.validate(model_input)
+        return cls.model.python_model.model.feature_df_schema.validate(model_input)
 
     @staticmethod
     def model_output_to_json(model_predictions: pd.DataFrame) -> str:
