@@ -2,6 +2,7 @@ from typing import Dict
 from pathlib import Path
 import pandas as pd
 import mlflow.pyfunc
+import json
 
 
 class MLModel:
@@ -32,6 +33,10 @@ class MLModel:
     def model_input_from_dict(cls, model_input_dict: Dict) -> pd.DataFrame:
         """Read data from record type dictionary representation.
 
+        The data frame dtypes are changed to the model schema. The reason this is not done is that
+        the decoding of json changes a float like 1.0 to an integer.
+
+
         Parameters
         ----------
         model_input_dict: dict
@@ -44,7 +49,10 @@ class MLModel:
         """
 
         model_input = pd.DataFrame.from_records(model_input_dict['data'])
-        return cls.model.python_model.model.feature_df_schema.validate(model_input)
+        model_input_modified = model_input.astype(
+            cls.model.python_model.model.feature_df_schema.get_dtypes()
+        )
+        return cls.model.python_model.model.feature_df_schema.validate_df(model_input_modified)
 
     @staticmethod
     def model_output_to_json(model_predictions: pd.DataFrame) -> str:
@@ -68,7 +76,7 @@ class MLModel:
         if not isinstance(model_predictions, pd.DataFrame):
             raise TypeError('model_predictions must be a pandas DataFrame')
 
-        return model_predictions.to_dict(orient='records')
+        return str(model_predictions.to_dict(orient='records'))
 
     @classmethod
     def predict_from_dict(cls, data_dict):

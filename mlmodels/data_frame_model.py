@@ -155,11 +155,11 @@ def validate_prediction_input_and_output(func):
                 "X must be a pandas DataFrame."
             )
 
-        _ = self_var.feature_df_schema.validate(X)
+        _ = self_var.feature_df_schema.validate_df(X)
 
         return_values = func(*args)
 
-        _ = self_var.target_df_schema.validate(return_values)
+        _ = self_var.target_df_schema.validate_df(return_values)
 
         return return_values
 

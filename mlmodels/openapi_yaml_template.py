@@ -41,19 +41,18 @@ responses:
     content:
       application/json:
         schema:
-          predictions:
-            items:
-                properties:
+          items:
+            properties:
 {% for target in target_openapi_named_tuple %}
-                    {{ target.name }}:
-                        format: {{ target.format }}
-                        nullable: False
-                        type: {{ target.type }}
+              {{ target.name }}:
+                format: {{ target.format }}
+                nullable: False
+                type: {{ target.type }}
     {% if target.enum %}
                     enum: {{ target.enum }}
     {% endif %}
 {% endfor %}
-            type: array
+          type: array
 tags:
 - predict
 """

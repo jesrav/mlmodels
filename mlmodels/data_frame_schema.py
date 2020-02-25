@@ -80,7 +80,7 @@ class DataFrameSchema:
         self.columns = columns
         self._data_frame_schema = _pandera_data_frame_schema_from_columns(columns)
 
-    def validate(self, df: pd.DataFrame) -> pd.DataFrame:
+    def validate_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """Validate pandas data frame
 
         Parameters
@@ -99,9 +99,6 @@ class DataFrameSchema:
         """
         return self._data_frame_schema.validate(df)
 
-    def __repr__(self):
-        return f'DataFrameSchema{{columns: {self.columns}}}'
-
     def get_dtypes(self) -> Dict:
         """
 
@@ -110,6 +107,10 @@ class DataFrameSchema:
         Dict: Dictionary where keys are the column names and values are the dtypes as strings.
         """
         return {col.name: col.dtype for col in self.columns}
+
+    def __repr__(self):
+        return f'DataFrameSchema{{columns: {self.columns}}}'
+
 
 def _infer_data_frame_schema_from_df(df: pd.DataFrame) -> DataFrameSchema:
     dtype_dict = df.dtypes.astype(str).to_dict()
