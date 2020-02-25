@@ -49,7 +49,7 @@ responses:
                 nullable: False
                 type: {{ target.type }}
     {% if target.enum %}
-                    enum: {{ target.enum }}
+                enum: {{ target.enum }}
     {% endif %}
 {% endfor %}
           type: array
