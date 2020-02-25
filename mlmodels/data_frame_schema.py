@@ -1,4 +1,5 @@
 from typing import List, Dict
+from collections import namedtuple
 import pandas as pd
 import pandera as pa
 
@@ -42,26 +43,20 @@ def _validate_column_input(name, dtype, enum):
 
 class Column:
 
-    def __init__(self, name: str, dtype: str, enum:List = []):
-
+    def __init__(self, name: str, dtype: str, enum: List = []):
         _validate_column_input(name, dtype, enum)
 
         self.name = name
         self.dtype = dtype
         self.enum = enum
 
-    def update_enum(self, enum):
-        _validate_enum(enum)
-        self.enum = enum
-
     def __repr__(self):
         return f'Column{{name: {self.name}, dtype: {self.dtype}, enum: {self.enum}}}'
 
 
-def _pandera_data_frame_schema_from_columns(columns:List) -> pa.DataFrameSchema:
-
+def _pandera_data_frame_schema_from_columns(column_dict: Dict) -> pa.DataFrameSchema:
     data_frame_schema_dict = {}
-    for col in columns:
+    for name, col in column_dict.items():
         if col.enum:
             data_frame_schema_dict[col.name] = pa.Column(
                 _dtype_to_pandera_map[col.dtype],
@@ -77,8 +72,21 @@ def _pandera_data_frame_schema_from_columns(columns:List) -> pa.DataFrameSchema:
 class DataFrameSchema:
 
     def __init__(self, columns: list):
-        self.columns = columns
-        self._data_frame_schema = _pandera_data_frame_schema_from_columns(columns)
+        if len(set([col.name for col in columns])) < len(columns):
+            raise ValueError('Columns names must be unique.')
+        self.column_dict = {col.name: col for col in columns}
+        self._data_frame_schema = _pandera_data_frame_schema_from_columns(self.column_dict)
+
+    def modify_column(self, column_name: str, dtype: str = None, enum: List = None):
+        _validate_column_input(column_name, dtype, enum)
+
+        initialized_col_names = [col for col in self.column_dict]
+        if column_name not in initialized_col_names:
+            raise ValueError(
+                f'column name must be one of the initialized column names: {initialized_col_names}'
+            )
+        new_column = Column(column_name, dtype, enum)
+        self.column_dict[column_name] = new_column
 
     def validate_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """Validate pandas data frame
@@ -106,10 +114,10 @@ class DataFrameSchema:
         -------
         Dict: Dictionary where keys are the column names and values are the dtypes as strings.
         """
-        return {col.name: col.dtype for col in self.columns}
+        return {col.name: col.dtype for col in self.column_dict}
 
     def __repr__(self):
-        return f'DataFrameSchema{{columns: {self.columns}}}'
+        return f'DataFrameSchema{{columns: {self.column_dict}}}'
 
 
 def _infer_data_frame_schema_from_df(df: pd.DataFrame) -> DataFrameSchema:
