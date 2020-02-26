@@ -69,7 +69,7 @@ def _data_frame_schema_to_open_api_cols(data_frame_schema):
             type=_DTYPE_TO_JSON_TYPE_MAP[col.dtype]['type'],
             enum=col.enum,
         )
-        for col in data_frame_schema.columns
+        for _, col in data_frame_schema.column_dict.items()
     ]
     return open_api_cols
 

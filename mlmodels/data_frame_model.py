@@ -1,8 +1,13 @@
 from functools import wraps
+from typing import List, Union
 import pandas as pd
 import mlflow.pyfunc
 
-from mlmodels.data_frame_schema import DataFrameSchema, _infer_data_frame_schema_from_df
+from mlmodels.data_frame_schema import (
+    DataFrameSchema,
+    _infer_data_frame_schema_from_df,
+    _get_enums_from_data_frame,
+)
 from mlmodels.base_classes import BaseModel
 from mlmodels.openapi_yaml_template import open_api_yaml_specification, open_api_dict_specification
 
@@ -54,7 +59,6 @@ class DataFrameModelMixin:
 # Decorators to help create models from DataFrameModel class.
 ########################################################################################################
 def infer_feature_df_schema_from_fit(func):
-
     @wraps(func)
     def wrapper(*args):
         self_var = args[0]
@@ -67,6 +71,12 @@ def infer_feature_df_schema_from_fit(func):
             )
 
         self_var.feature_df_schema = _infer_data_frame_schema_from_df(X)
+
+        if hasattr(self_var, 'feature_enum_columns'):
+            if self_var.feature_enum_columns:
+                enum_dict = _get_enums_from_data_frame(X, self_var.feature_enum_columns)
+                for feature_column, enum in enum_dict.items():
+                    self_var.feature_df_schema.modify_column(feature_column, enum=enum)
 
         return func(*args)
 
@@ -88,59 +98,14 @@ def infer_target_df_schema_from_fit(func):
 
         self_var.target_df_schema = _infer_data_frame_schema_from_df(y)
 
+        if hasattr(self_var, 'target_enum_columns'):
+            if self_var.target_enum_columns:
+                enum_dict = _get_enums_from_data_frame(y, self_var.target_enum_columns)
+                for target_column, enum in enum_dict.items():
+                    self_var.target_df_schema.modify_column(target_column, enum=enum)
+
         return func(*args)
-
     return wrapper
-
-
-# def infer_category_values_from_fit(func):
-#
-#     @wraps(func)
-#     def wrapper(*args):
-#         self_var = args[0]
-#         X = args[1]
-#         y = args[2]
-#
-#         if self_var.categorical_columns is None:
-#             return func(*args)
-#         else:
-#
-#             if isinstance(X, pd.DataFrame) is False:
-#                 raise ValueError(
-#                     "X must be a pandas DataFrame."
-#                 )
-#
-#             if (isinstance(y, pd.Series) or isinstance(y, pd.DataFrame)) is False:
-#                 raise ValueError(
-#                     "y must be a pandas Series or DataFrame."
-#                 )
-#
-#             if self_var.features is None:
-#                 raise ValueError("features attribute must be set. It should be a list of features")
-#
-#             if not set(self_var.categorical_columns).issubset(set(self_var.features).union({y.name})):
-#                 raise ValueError("categorical_features must be a subset of the union of features and target name")
-#
-#             categorical_features = [
-#                 cat_feat for cat_feat in self_var.categorical_columns
-#                 if cat_feat in self_var.features
-#             ]
-#             categorical_target = [
-#                 cat_feat for cat_feat in self_var.categorical_columns
-#                 if cat_feat == y.name
-#             ][0]
-#
-#             self_var.possible_categorical_column_values = {
-#                 categorical_feature: list(X[categorical_feature].unique())
-#                 for categorical_feature in categorical_features
-#             }
-#
-#             if categorical_target:
-#                 self_var.possible_categorical_column_values[categorical_target] = list(y.unique())
-#
-#             return func(*args)
-#
-#     return wrapper
 
 
 def validate_prediction_input_and_output(func):

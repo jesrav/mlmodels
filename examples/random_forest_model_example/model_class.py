@@ -43,11 +43,15 @@ class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
     def __init__(
             self,
             features,
+            feature_enum_columns=None,
+            target_enum_columns=None,
             random_forest_params={'n_estimators': 100, 'max_depth': 30},
     ):
         super().__init__()
         self.features = features
         self.target_columns = None,
+        self.feature_enum_columns = feature_enum_columns
+        self.target_enum_columns = target_enum_columns
         self.random_forest_params = random_forest_params
         self.model = RandomForestClassifier(**random_forest_params)
 

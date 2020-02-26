@@ -45,14 +45,16 @@ if __name__ == '__main__':
     # Fit model, make predictions and evaluate
     model = RandomForestClassifierModel(
         features=train_x.columns,
+        feature_enum_columns=['group1', 'group2'],
         random_forest_params={'n_estimators': 100, 'max_depth': 15},
     )
     model.fit(train_x, train_y)
 
-    from mlmodels import DataFrameSchema, Column
-    target_columns = [Column('quality', 'int64', enum=[4, 6, 5, 7, 3, 8])]
-    target_schema = DataFrameSchema(target_columns)
-    model.set_target_df_schema(target_df_schema=target_schema)
+    # from mlmodels import DataFrameSchema, Column
+    # target_columns = [Column('quality', 'int64', enum=[4, 6, 5, 7, 3, 8])]
+    # target_schema = DataFrameSchema(target_columns)
+    # model.set_target_df_schema(target_df_schema=target_schema)
+
     predicted_qualities = model.predict(test_x)
 
 
