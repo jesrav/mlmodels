@@ -3,9 +3,9 @@ import numpy as np
 import os
 from pathlib import Path
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 from mlmodels import MLFlowWrapper
-from model_class import RandomForestRegressorModel
+from model_class import RandomForestClassifierModel
 import mlflow.pyfunc
 
 
@@ -30,6 +30,8 @@ if __name__ == '__main__':
     # Create 3 randomly assigned groups
     data['group1'] = np.random.choice(3, len(data))
     data['group2'] = np.random.choice([3, 7], len(data))
+    data['group1'] = data['group1'].astype('int64')
+    data['group2'] = data['group2'].astype('int64')
 
     # Split the data into training and test sets. (0.75, 0.25) split.
     train, test = train_test_split(data)
@@ -37,19 +39,26 @@ if __name__ == '__main__':
     # The predicted column is "quality" which is a scalar from [3, 9]
     train_x = train.drop(["quality"], axis=1)
     test_x = test.drop(["quality"], axis=1)
-    train_y = train["quality"]
-    test_y = test["quality"]
+    train_y = train[["quality"]]
+    test_y = test[["quality"]]
 
     # Fit model, make predictions and evaluate
-    model = RandomForestRegressorModel(
+    model = RandomForestClassifierModel(
         features=train_x.columns,
-        categorical_columns=['group1', 'group2'],
+        feature_enum_columns=['group1', 'group2'],
         random_forest_params={'n_estimators': 100, 'max_depth': 15},
     )
     model.fit(train_x, train_y)
 
+    # from mlmodels import DataFrameSchema, Column
+    # target_columns = [Column('quality', 'int64', enum=[4, 6, 5, 7, 3, 8])]
+    # target_schema = DataFrameSchema(target_columns)
+    # model.set_target_df_schema(target_df_schema=target_schema)
+
     predicted_qualities = model.predict(test_x)
 
+
+    print(predicted_qualities.head())
     (rmse, mae) = eval_metrics(test_y, predicted_qualities)
 
     print("  RMSE: %s" % rmse)

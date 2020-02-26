@@ -1,7 +1,17 @@
 from jinja2 import Template
 import yaml
+from collections import namedtuple
+from mlmodels.data_frame_schema import DataFrameSchema
 
-template_str = """
+_DTYPE_TO_JSON_TYPE_MAP = {
+    'int64': {'type': 'number', 'format': 'integer'},
+    'int32': {'type': 'number', 'format': 'integer'},
+    'float64': {'type': 'number', 'format': 'float'},
+    'float32': {'type': 'number', 'format': 'float'},
+    'O': {'type': 'string'},
+}
+
+openapi_03_template_str = """
 requestBody:
   required: true
   content:
@@ -11,13 +21,14 @@ requestBody:
           data:
             items:
               properties:
-{% for feat in feature_dict %}
-                {{feat}}:
-                    format: {{feature_dict[feat]['format']}}
+{% for feat in feature_openapi_named_tuple %}
+                {{ feat.name }}:
+                    format: {{ feat.format }}
                     nullable: False
-                    type: {{feature_dict[feat]['type']}}
-    {% if feat in possible_categorical_column_values %}
-                    enum: {{possible_categorical_column_values[feat]}}
+                    type: {{ feat.type }}
+                    required: true
+    {% if feat.enum %}
+                    enum: {{ feat.enum }}
     {% endif %}
 {% endfor %}
             type: array
@@ -31,36 +42,129 @@ responses:
     content:
       application/json:
         schema:
+          items:
             properties:
-              predictions:
-                items:
-                    format: {{target_dict['format']}}
-                    nullable: False
-                    type: {{target_dict['type']}}
-                type: array
-            type: object
+{% for target in target_openapi_named_tuple %}
+              {{ target.name }}:
+                format: {{ target.format }}
+                nullable: False
+                type: {{ target.type }}
+                required: true
+    {% if target.enum %}
+                enum: {{ target.enum }}
+    {% endif %}
+{% endfor %}
+          type: array
 tags:
 - predict
 """
 
+openapi_02_template_str = """
+parameters:
+- in: "body"
+  name: "body"
+  required: true
+  schema:
+    properties:
+      data:
+        items:
+          properties:
+{% for feat in feature_openapi_named_tuple %}
+            {{ feat.name }}:
+                format: {{ feat.format }}
+                nullable: False
+                type: {{ feat.type }}
+                required: true
+    {% if feat.enum %}
+                enum: {{ feat.enum }}
+    {% endif %}
+{% endfor %}
+        type: array
+    required:
+      - data
+    type: object
+
+responses:
+  200:
+    description: List of predictions
+    schema:
+      items:
+        properties:
+{% for target in target_openapi_named_tuple %}
+          {{ target.name }}:
+            format: {{ target.format }}
+            nullable: False
+            type: {{ target.type }}
+            required: true
+    {% if target.enum %}
+            enum: {{ target.enum }}
+    {% endif %}
+{% endfor %}
+      type: array
+  
+tags:
+  - predict
+"""
+
+# Named tuple to render data frame column in jinja
+OpenAPICol = namedtuple("OpenAPICol", ["name", "format", "type", 'enum'])
+
+
+def _data_frame_schema_to_open_api_cols(data_frame_schema):
+    open_api_cols = [
+        OpenAPICol(
+            name=col.name,
+            format=_DTYPE_TO_JSON_TYPE_MAP[col.dtype]['format'],
+            type=_DTYPE_TO_JSON_TYPE_MAP[col.dtype]['type'],
+            enum=col.enum,
+        )
+        for _, col in data_frame_schema.column_dict.items()
+    ]
+    return open_api_cols
+
+
 def open_api_yaml_specification(
-        model_input_record_field_schema_dict,
-        possible_categorical_column_values,
-        model_target_field_schema_dict):
-    t = Template(template_str)
+    feature_df_schema: DataFrameSchema,
+    target_df_schema: DataFrameSchema,
+) -> str:
+    """Get open API spec for model from template in a YAML representation.
+
+    Parameters
+    ----------
+    feature_df_schema: DataFrameSchema
+    target_df_schema: DataFrameSchema
+
+    Returns
+    -------
+    str
+        YAML representation of the open API spec for the the model predictions.
+    """
+
+    t = Template(openapi_03_template_str)
     return t.render(
-        feature_dict=model_input_record_field_schema_dict,
-        possible_categorical_column_values=possible_categorical_column_values,
-        target_dict=model_target_field_schema_dict)
+        feature_openapi_named_tuple=_data_frame_schema_to_open_api_cols(feature_df_schema),
+        target_openapi_named_tuple=_data_frame_schema_to_open_api_cols(target_df_schema),
+    )
 
 
 def open_api_dict_specification(
-        model_input_record_field_schema_dict,
-        possible_categorical_column_values,
-        model_target_field_schema_dict,
-):
+        feature_df_schema: DataFrameSchema,
+        target_df_schema: DataFrameSchema,
+) -> str:
+    """Get open API spec for model from template in a YAML representation.
+
+    Parameters
+    ----------
+    feature_df_schema: DataFrameSchema
+    target_df_schema: DataFrameSchema
+
+    Returns
+    -------
+    dict
+        Dictionary representation of the open API spec for the the model predictions.
+    """
+
     return yaml.safe_load(open_api_yaml_specification(
-        model_input_record_field_schema_dict,
-        possible_categorical_column_values,
-        model_target_field_schema_dict,
+        feature_df_schema,
+        target_df_schema
     ))

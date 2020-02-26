@@ -17,7 +17,7 @@ setup(
         'pandas',
         'jinja2',
         'PyYAML',
-        'numpy'
+        'numpy', 'pandera'
     ],
     package_data={'': [
         'model_service/Dockerfile',
