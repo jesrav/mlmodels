@@ -1,5 +1,4 @@
 from typing import List, Dict, Union
-from collections import namedtuple
 import pandas as pd
 import pandera as pa
 

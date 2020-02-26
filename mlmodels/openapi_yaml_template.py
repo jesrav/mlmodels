@@ -11,7 +11,7 @@ _DTYPE_TO_JSON_TYPE_MAP = {
     'O': {'type': 'string'},
 }
 
-template_str = """
+openapi_03_template_str = """
 requestBody:
   required: true
   content:
@@ -26,6 +26,7 @@ requestBody:
                     format: {{ feat.format }}
                     nullable: False
                     type: {{ feat.type }}
+                    required: true
     {% if feat.enum %}
                     enum: {{ feat.enum }}
     {% endif %}
@@ -48,6 +49,7 @@ responses:
                 format: {{ target.format }}
                 nullable: False
                 type: {{ target.type }}
+                required: true
     {% if target.enum %}
                 enum: {{ target.enum }}
     {% endif %}
@@ -55,6 +57,53 @@ responses:
           type: array
 tags:
 - predict
+"""
+
+openapi_02_template_str = """
+parameters:
+- in: "body"
+  name: "body"
+  required: true
+  schema:
+    properties:
+      data:
+        items:
+          properties:
+{% for feat in feature_openapi_named_tuple %}
+            {{ feat.name }}:
+                format: {{ feat.format }}
+                nullable: False
+                type: {{ feat.type }}
+                required: true
+    {% if feat.enum %}
+                enum: {{ feat.enum }}
+    {% endif %}
+{% endfor %}
+        type: array
+    required:
+      - data
+    type: object
+
+responses:
+  200:
+    description: List of predictions
+    schema:
+      items:
+        properties:
+{% for target in target_openapi_named_tuple %}
+          {{ target.name }}:
+            format: {{ target.format }}
+            nullable: False
+            type: {{ target.type }}
+            required: true
+    {% if target.enum %}
+            enum: {{ target.enum }}
+    {% endif %}
+{% endfor %}
+      type: array
+  
+tags:
+  - predict
 """
 
 # Named tuple to render data frame column in jinja
@@ -91,7 +140,7 @@ def open_api_yaml_specification(
         YAML representation of the open API spec for the the model predictions.
     """
 
-    t = Template(template_str)
+    t = Template(openapi_03_template_str)
     return t.render(
         feature_openapi_named_tuple=_data_frame_schema_to_open_api_cols(feature_df_schema),
         target_openapi_named_tuple=_data_frame_schema_to_open_api_cols(target_df_schema),
