@@ -3,12 +3,10 @@ tags:
 responses:
     200:
         description: The version of the model
-        content:
-            application/json:
-                    schema:
-                        type: object
-                        properties:
-                            model_version:
-                                type: string
-                        example:
-                            model_version: '3'
+        schema:
+            type: object
+            properties:
+                model_version:
+                    type: string
+            example:
+                model_version: '3'

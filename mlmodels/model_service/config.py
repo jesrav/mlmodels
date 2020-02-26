@@ -6,8 +6,8 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 class Config(object):
     DEBUG = False
     SWAGGER = {
-    'title': 'OA3 Callbacks',
-    'openapi': '3.0.2'
+    'title': 'ML model endpoint',
+    'swagger': '2.0',
     }
 
 class Development(Config):

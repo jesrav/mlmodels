@@ -65,16 +65,26 @@ parameters:
   name: "body"
   required: true
   schema:
+    $ref: '#/definitions/prediction_input'
+
+responses:
+  200:
+    description: List of predictions
+    schema:
+      $ref: '#/definitions/predictions'
+  
+tags:
+  - predict
+definitions:
+  prediction_input:
     properties:
       data:
         items:
           properties:
 {% for feat in feature_openapi_named_tuple %}
             {{ feat.name }}:
-                format: {{ feat.format }}
-                nullable: False
+                format: {{ feat.format }}                
                 type: {{ feat.type }}
-                required: true
     {% if feat.enum %}
                 enum: {{ feat.enum }}
     {% endif %}
@@ -84,26 +94,18 @@ parameters:
       - data
     type: object
 
-responses:
-  200:
-    description: List of predictions
-    schema:
-      items:
-        properties:
+  predictions:
+    items:
+      properties:
 {% for target in target_openapi_named_tuple %}
-          {{ target.name }}:
-            format: {{ target.format }}
-            nullable: False
-            type: {{ target.type }}
-            required: true
+        {{ target.name }}:
+          format: {{ target.format }}
+          type: {{ target.type }}
     {% if target.enum %}
-            enum: {{ target.enum }}
+          enum: {{ target.enum }}
     {% endif %}
 {% endfor %}
-      type: array
-  
-tags:
-  - predict
+    type: array
 """
 
 # Named tuple to render data frame column in jinja
@@ -140,7 +142,7 @@ def open_api_yaml_specification(
         YAML representation of the open API spec for the the model predictions.
     """
 
-    t = Template(openapi_03_template_str)
+    t = Template(openapi_02_template_str)
     return t.render(
         feature_openapi_named_tuple=_data_frame_schema_to_open_api_cols(feature_df_schema),
         target_openapi_named_tuple=_data_frame_schema_to_open_api_cols(target_df_schema),

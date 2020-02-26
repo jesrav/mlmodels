@@ -3,12 +3,10 @@ tags:
 responses:
     200:
         description: The time the model was trained
-        content:
-            application/json:
-                    schema:
-                        type: object
-                        properties:
-                            model_train_datetime:
-                                type: string
-                        example:
-                            model_train_datetime: '2020-02-13 08:28:25.657561'
+        schema:
+            type: object
+            properties:
+                model_train_datetime:
+                    type: string
+            example:
+                model_train_datetime: '2020-02-13 08:28:25.657561'
