@@ -33,8 +33,8 @@ class RandomForestRegressorModel(BaseModel, DataFrameModelMixin):
     @validate_prediction_input_and_output
     def predict(self, X):
         predictions_array = self.model.predict(X[self.features])
-        predictions_series = pd.DataFrame(data=predictions_array, columns=self.target_columns)
-        return predictions_series
+        predictions_df = pd.DataFrame(data=predictions_array, columns=self.target_columns)
+        return predictions_df
 
 
 class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
@@ -65,5 +65,5 @@ class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
     @validate_prediction_input_and_output
     def predict(self, X):
         predictions_array = self.model.predict(X[self.features])
-        predictions_series = pd.DataFrame(data=predictions_array, columns=self.target_columns)
-        return predictions_series
+        predictions_df = pd.DataFrame(data=predictions_array, columns=self.target_columns)
+        return predictions_df

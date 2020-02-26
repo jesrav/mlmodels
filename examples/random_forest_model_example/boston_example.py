@@ -28,7 +28,8 @@ if __name__ == '__main__':
     boston = load_boston()
     x = pd.DataFrame(boston.data)
     x.columns = boston.feature_names
-    y = pd.Series(boston.target)
+    y = pd.DataFrame(boston.target)
+    y.columns = ['price']
 
     # Split the data into training and test sets. (0.75, 0.25) split.
     train_x, test_x, train_y, test_y = train_test_split(x, y)

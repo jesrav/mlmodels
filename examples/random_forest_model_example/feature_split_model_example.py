@@ -37,8 +37,8 @@ if __name__ == '__main__':
     # The predicted column is "quality" which is a scalar from [3, 9]
     train_x = train.drop(["quality"], axis=1)
     test_x = test.drop(["quality"], axis=1)
-    train_y = train["quality"]
-    test_y = test["quality"]
+    train_y = train[["quality"]]
+    test_y = test[["quality"]]
 
     # Create dictionary of individual models. In this cas all the same.
     features_individual_models = ["density", "chlorides", "alcohol"]
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     features = features_individual_models + ["group"]
     model = FeatureSplitModel(
         features=features,
-        categorical_columns=['group'],
+        feature_enum_columns=['group'],
         group_column="group",
         group_model_dict=group_model_dict
     )

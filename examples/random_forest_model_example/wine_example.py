@@ -50,15 +50,8 @@ if __name__ == '__main__':
     )
     model.fit(train_x, train_y)
 
-    # from mlmodels import DataFrameSchema, Column
-    # target_columns = [Column('quality', 'int64', enum=[4, 6, 5, 7, 3, 8])]
-    # target_schema = DataFrameSchema(target_columns)
-    # model.set_target_df_schema(target_df_schema=target_schema)
-
     predicted_qualities = model.predict(test_x)
 
-
-    print(predicted_qualities.head())
     (rmse, mae) = eval_metrics(test_y, predicted_qualities)
 
     print("  RMSE: %s" % rmse)

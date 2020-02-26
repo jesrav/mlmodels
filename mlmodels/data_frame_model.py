@@ -140,11 +140,16 @@ class FeatureSplitModel(BaseModel, DataFrameModelMixin):
     def __init__(
             self,
             features=None,
+            feature_enum_columns=None,
+            target_enum_columns=None,
             group_column=None,
             group_model_dict=None
     ):
         super().__init__()
         self.features = features
+        self.target_columns = None,
+        self.feature_enum_columns = feature_enum_columns,
+        self.target_enum_columns = target_enum_columns,
         self.group_model_dict = group_model_dict
         self.group_column = group_column
 
@@ -158,6 +163,8 @@ class FeatureSplitModel(BaseModel, DataFrameModelMixin):
             mask = (X[self.group_column] == group)
             self.group_model_dict[group].fit(X[mask], y[mask])
 
+        self.target_columns = y.columns
+
     @validate_prediction_input_and_output
     def predict(self, X):
         assert isinstance(X, pd.DataFrame), "X must be a Pandas data frame"
@@ -167,8 +174,8 @@ class FeatureSplitModel(BaseModel, DataFrameModelMixin):
         for group in X[self.group_column].unique():
             mask = (X[self.group_column] == group)
             X.loc[mask, 'prediction'] = self.group_model_dict[group].predict(X[mask])
-
-        return X[['prediction']]
+            prediction_df = pd.DataFrame(data=X['prediction'].values, columns=self.target_columns)
+        return prediction_df
 
 
 # ########################################################################################################
