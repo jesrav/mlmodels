@@ -43,58 +43,69 @@ dummy_model.model_initiated_dt
 # Predict
 loaded_model.predict([[1, 1], [2, 2]])
 ```
-## Data frame model decorator
-The data frame model decorator can be used to add some functionality to a model class that takes a Pandas DataFrame as input and produces predictions in the form of a Pandas Series or DataFrame.
-It adds methods for using the features and dtypes of the input dataframe to:
-- validate the date frame schema when predicting
-- generate an open api specification.
+## Data frame model mixin class
+If you create a model that takes a data frame and outputs a data frame when predicting, you can use the DataFrameModelMixin class to add some functionality.
+It adds the following methods: 
+- set_feature_df_schema: setting the schema of the schema of the model input 
+- set_target_df_schema: setting the schema of the prediction data frame.
+- get_open_api_yaml/get_open_api_dict: Generating an open api specification.
 
-The class you decorate needs to set the following attributes in the init method.
-- a features attribute (list of feature names)
-- a categorical_columns attribute (list of categorical columns)
+The DataFrameModelMixin class can be used in combination with the accompanying decorators to infer the feature and target schema on fit and validate new data on predict.
 
 ### Example use
 ```python
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from mlmodels import (
     BaseModel,
-    data_frame_model
+    DataFrameModelMixin,
+    infer_target_df_schema_from_fit,
+    infer_feature_df_schema_from_fit,
+    validate_prediction_input_and_output
 )
 
-@data_frame_model
-class RandomForestRegressorModel(BaseModel):
+class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
     MODEL_NAME = 'Random forest model'
 
     def __init__(
             self,
             features,
-            categorical_columns=None,
+            feature_enum_columns=None,
+            target_enum_columns=None,
             random_forest_params={'n_estimators': 100, 'max_depth': 30},
     ):
         super().__init__()
         self.features = features
-        self.categorical_columns = categorical_columns
+        self.target_columns = None,
+        self.feature_enum_columns = feature_enum_columns
+        self.target_enum_columns = target_enum_columns
         self.random_forest_params = random_forest_params
-        self.model = RandomForestRegressor(**random_forest_params)
+        self.model = RandomForestClassifier(**random_forest_params)
 
+    @infer_feature_df_schema_from_fit
+    @infer_target_df_schema_from_fit
     def fit(self, X, y):
         self.model.fit(X[self.features], y)
+        self.target_columns = y.columns
         return self
 
+    @validate_prediction_input_and_output
     def predict(self, X):
-        predictions = self.model.predict(X[self.features])
-        return predictions
+        predictions_array = self.model.predict(X[self.features])
+        predictions_series = pd.DataFrame(data=predictions_array, columns=self.target_columns)
+        return predictions_series
 
 # Read data
 csv_url = 'http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv'
 data = pd.read_csv(csv_url, sep=';')
 
-# Create categorical features
-data["group1"] = np.random.choice(3, len(data))
-data["group2"] = np.random.choice([3, 7], len(data))
+# Create 3 randomly assigned groups
+data['group1'] = np.random.choice(3, len(data))
+data['group2'] = np.random.choice([3, 7], len(data))
+data['group1'] = data['group1'].astype('int64')
+data['group2'] = data['group2'].astype('int64')
 
 # Split the data into training and test sets. (0.75, 0.25) split.
 train, test = train_test_split(data)
@@ -102,14 +113,13 @@ train, test = train_test_split(data)
 # The predicted column is "quality" which is a scalar from [3, 9]
 train_x = train.drop(["quality"], axis=1)
 test_x = test.drop(["quality"], axis=1)
-train_y = train["quality"]
-test_y = test["quality"]
+train_y = train[["quality"]]
+test_y = test[["quality"]]
 
-# Fit model make predictions and evaluate
-features = ["pH", "density", "chlorides", "alcohol", "group1", "group2"]
-model = RandomForestRegressorModel(
-    features=features,    
-    categorical_columns=["group1", "group2"],
+# Fit model, make predictions and evaluate
+model = RandomForestClassifierModel(
+    features=train_x.columns,
+    feature_enum_columns=['group1', 'group2'],
     random_forest_params={'n_estimators': 100, 'max_depth': 15},
 )
 model.fit(train_x, train_y)
@@ -117,17 +127,24 @@ model.fit(train_x, train_y)
 predicted_qualities = model.predict(test_x)
 ```
 ### Model input schema validation
-If the input dataframe does not have the right features or the columns do not have the right dtypes,
-you will get an error.
+If the input dataframe does not match the data frame schema you will get an error.
 ```python
 # Example of missing features
 model.predict(test_x[["density", "chlorides", "alcohol"]])
-# returns: ValueError: The following features must be in X: ['pH', 'density', 'chlorides', 'alcohol', 'group1', 'group2']
+# returns: pandera.errors.SchemaError: column 'fixed acidity' not in dataframe
 
 # Example of wrong dtype
-test_x.density = test_x.density.astype('int64')
-model.predict(test_x)
-# returns: ValueError: Dtypes must be: {'pH': dtype('float64'), 'density': dtype('float64'), 'chlorides': dtype('float64'), 'alcohol': dtype('float64'), 'group1': dtype('int32'), 'group2': dtype('int32')}
+test_x_copy = test_x.copy()
+test_x_copy.density = test_x_copy.density.astype('int64')
+model.predict(test_x_copy)
+# returns: pandera.errors.SchemaError: expected series 'density' to have type float64, got int64
+
+# Example of wrong categorical value/enum.
+test_x_copy = test_x.copy()
+test_x_copy.group1 = 100
+model.predict(test_x_copy)
+# returns: pandera.errors.SchemaError: <Schema Column: 'group1' type=int64> failed element-wise validator 0:
+# <Check _isin: isin(frozenset({0, 1, 2}))>
 ```
 
 ## Creating MLFLOW pyfunc model
@@ -138,13 +155,7 @@ mlflow_model = MLFlowWrapper(model)
 ```
 
 ### Building a docker image with a model service
-The model must wrapped as an mlflow.pyfunc model and must have the following 
-- get_open_api_dict: Method that returns an open api specification as a dictionary.
-- model_input_from_dict: Method that transforms the dictionary model input, from the posted json, to input that can be passed to a predict method.
-- model_initiated_dt: Attribute indicating when the object was initialized (when the model was trained).
-
-If you decorated a model class with the data_frame_model decorator, you will automatically have the above.
-The model must return predictions in an array-like form.  
+The model must wrapped as an mlflow.pyfunc model and must inherit from the BaseModel and DataFrameModelMixin
 
 First we train and save a model locally. You need to use python 3.6.7 or update the python version in examples/random_forest_model_example/conda.yaml.
 ```console
