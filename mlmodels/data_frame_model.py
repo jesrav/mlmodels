@@ -1,5 +1,4 @@
 from functools import wraps
-from typing import List, Union
 import pandas as pd
 import mlflow.pyfunc
 
@@ -9,7 +8,7 @@ from mlmodels.data_frame_schema import (
     _get_enums_from_data_frame,
 )
 from mlmodels.base_classes import BaseModel
-from mlmodels.openapi_yaml_template import open_api_yaml_specification, open_api_dict_specification
+from mlmodels.openapi_spec import open_api_yaml_specification, open_api_dict_specification
 
 
 ########################################################################################################

@@ -1,0 +1,46 @@
+parameters:
+- in: "body"
+  name: "body"
+  required: true
+  schema:
+    $ref: '#/definitions/prediction_input'
+
+responses:
+  200:
+    description: List of predictions
+    schema:
+      $ref: '#/definitions/predictions'
+
+tags:
+  - predict
+definitions:
+  prediction_input:
+    properties:
+      data:
+        items:
+          properties:
+{% for feat in feature_openapi_named_tuple %}
+            {{ feat.name }}:
+                format: {{ feat.format }}
+                type: {{ feat.type }}
+    {% if feat.enum %}
+                enum: {{ feat.enum }}
+    {% endif %}
+{% endfor %}
+        type: array
+    required:
+      - data
+    type: object
+
+  predictions:
+    items:
+      properties:
+{% for target in target_openapi_named_tuple %}
+        {{ target.name }}:
+          format: {{ target.format }}
+          type: {{ target.type }}
+    {% if target.enum %}
+          enum: {{ target.enum }}
+    {% endif %}
+{% endfor %}
+    type: array
