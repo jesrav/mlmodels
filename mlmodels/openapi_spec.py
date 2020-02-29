@@ -15,19 +15,30 @@ _DTYPE_TO_JSON_TYPE_MAP = {
 openapi_template_path = Path('mlmodels/openapi_templates/openapi_version2.yaml')
 
 # Named tuple to render data frame column in jinja
-OpenAPICol = namedtuple("OpenAPICol", ["name", "format", "type", 'enum'])
+OpenAPICol = namedtuple("OpenAPICol", ["name", "format", "type", 'enum', 'min_', 'max_'])
 
 
 def _data_frame_schema_to_open_api_cols(data_frame_schema):
-    open_api_cols = [
-        OpenAPICol(
+    open_api_cols = []
+    for _, col in data_frame_schema.column_dict.items():
+        if hasattr(col.interval, 'start_value'):
+            min_ = col.interval.start_value
+        else:
+            min_ = None
+        if hasattr(col.interval, 'end_value'):
+            max_ = col.interval.end_value
+        else:
+            max_ = None
+
+        openapi_col = OpenAPICol(
             name=col.name,
             format=_DTYPE_TO_JSON_TYPE_MAP[col.dtype]['format'],
             type=_DTYPE_TO_JSON_TYPE_MAP[col.dtype]['type'],
             enum=col.enum,
+            min_=min_,
+            max_=max_,
         )
-        for _, col in data_frame_schema.column_dict.items()
-    ]
+        open_api_cols.append(openapi_col)
     return open_api_cols
 
 

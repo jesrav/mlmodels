@@ -10,7 +10,7 @@ from mlmodels import (
 
 
 class RandomForestRegressorModel(BaseModel, DataFrameModelMixin):
-    MODEL_NAME = 'Random forest model'
+    MODEL_NAME = 'Random forest regression model'
 
     def __init__(
             self,
@@ -38,13 +38,15 @@ class RandomForestRegressorModel(BaseModel, DataFrameModelMixin):
 
 
 class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
-    MODEL_NAME = 'Random forest model'
+    MODEL_NAME = 'Random forest classifier model'
 
     def __init__(
             self,
             features,
             feature_enum_columns=None,
             target_enum_columns=None,
+            feature_interval_columns=None,
+            target_interval_columns=None,
             random_forest_params={'n_estimators': 100, 'max_depth': 30},
     ):
         super().__init__()
@@ -52,6 +54,8 @@ class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
         self.target_columns = None,
         self.feature_enum_columns = feature_enum_columns
         self.target_enum_columns = target_enum_columns
+        self.feature_interval_columns = feature_interval_columns,
+        self.target_interval_columns = target_interval_columns,
         self.random_forest_params = random_forest_params
         self.model = RandomForestClassifier(**random_forest_params)
 

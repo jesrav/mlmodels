@@ -16,6 +16,12 @@ requestBody:
     {% if feat.enum %}
                     enum: {{ feat.enum }}
     {% endif %}
+    {% if feat.min %}
+          minimum: {{ feat.min_ }}
+    {% endif %}
+    {% if feat.max_ %}
+          maximum: {{ feat.max_ }}
+    {% endif %}
 {% endfor %}
             type: array
         required:
@@ -38,6 +44,12 @@ responses:
                 required: true
     {% if target.enum %}
                 enum: {{ target.enum }}
+    {% endif %}
+    {% if target.min %}
+          minimum: {{ target.min_ }}
+    {% endif %}
+    {% if target.max_ %}
+          maximum: {{ target.max_ }}
     {% endif %}
 {% endfor %}
           type: array

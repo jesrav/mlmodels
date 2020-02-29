@@ -6,6 +6,7 @@ from mlmodels.data_frame_schema import (
     DataFrameSchema,
     _infer_data_frame_schema_from_df,
     _get_enums_from_data_frame,
+    _get_intervals_from_data_frame,
 )
 from mlmodels.base_classes import BaseModel
 from mlmodels.openapi_spec import open_api_yaml_specification, open_api_dict_specification
@@ -77,6 +78,11 @@ def infer_feature_df_schema_from_fit(func):
                 for feature_column, enum in enum_dict.items():
                     self_var.feature_df_schema.modify_column(feature_column, enum=enum)
 
+        if hasattr(self_var, 'feature_interval_columns'):
+            interval_dict = _get_intervals_from_data_frame(X, self_var.feature_interval_columns)
+            for feature_column, interval in interval_dict.items():
+                self_var.feature_df_schema_df_schema.modify_column(feature_column, interval=interval)
+
         return func(*args)
 
     return wrapper
@@ -102,6 +108,11 @@ def infer_target_df_schema_from_fit(func):
                 enum_dict = _get_enums_from_data_frame(y, self_var.target_enum_columns)
                 for target_column, enum in enum_dict.items():
                     self_var.target_df_schema.modify_column(target_column, enum=enum)
+
+        if hasattr(self_var, 'target_interval_columns'):
+            interval_dict = _get_intervals_from_data_frame(y, self_var.target_interval_columns)
+            for target_column, interval in interval_dict.items():
+                self_var.target_df_schema.modify_column(target_column, interval=interval)
 
         return func(*args)
     return wrapper
