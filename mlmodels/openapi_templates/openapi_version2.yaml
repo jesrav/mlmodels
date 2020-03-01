@@ -18,6 +18,10 @@ definitions:
     properties:
       data:
         items:
+          required:
+{% for feat in feature_openapi_named_tuple %}
+          - {{ feat.name }}
+{% endfor %}
           properties:
 {% for feat in feature_openapi_named_tuple %}
             {{ feat.name }}:
@@ -31,7 +35,7 @@ definitions:
   {% endif %}
   {% if feat.max_ is not none %}
               maximum: {{ feat.max_ }}
-    {% endif %}
+  {% endif %}
 {% endfor %}
         type: array
     required:
