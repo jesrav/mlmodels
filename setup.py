@@ -22,7 +22,8 @@ setup(
     package_data={'': [
         'model_service/Dockerfile',
         'model_service/requirements.txt',
-        'model_service/app/routes/swagger/*'
+        'model_service/app/routes/swagger/*',
+        'openapi_templates/*',
     ]},
     entry_points='''
             [console_scripts]

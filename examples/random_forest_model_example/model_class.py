@@ -23,7 +23,7 @@ class RandomForestRegressorModel(BaseModel, DataFrameModelMixin):
         self.random_forest_params = random_forest_params
         self.model = RandomForestRegressor(**random_forest_params)
 
-    @infer_feature_df_schema_from_fit
+    @infer_feature_df_schema_from_fit(interval_buffer_percent=10)
     @infer_target_df_schema_from_fit
     def fit(self, X, y):
         self.model.fit(X[self.features], y)
@@ -54,12 +54,12 @@ class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
         self.target_columns = None,
         self.feature_enum_columns = feature_enum_columns
         self.target_enum_columns = target_enum_columns
-        self.feature_interval_columns = feature_interval_columns,
-        self.target_interval_columns = target_interval_columns,
+        self.feature_interval_columns = feature_interval_columns
+        self.target_interval_columns = target_interval_columns
         self.random_forest_params = random_forest_params
         self.model = RandomForestClassifier(**random_forest_params)
 
-    @infer_feature_df_schema_from_fit
+    @infer_feature_df_schema_from_fit(interval_buffer_percent=10)
     @infer_target_df_schema_from_fit
     def fit(self, X, y):
         self.model.fit(X[self.features], y)

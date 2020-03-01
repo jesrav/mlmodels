@@ -58,34 +58,41 @@ class DataFrameModelMixin:
 ########################################################################################################
 # Decorators to help create models from DataFrameModel class.
 ########################################################################################################
-def infer_feature_df_schema_from_fit(func):
-    @wraps(func)
-    def wrapper(*args):
-        self_var = args[0]
-        X = args[1]
-        y = args[2]
+def infer_feature_df_schema_from_fit(interval_buffer_percent=15):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args):
+            self_var = args[0]
+            X = args[1]
+            y = args[2]
 
-        if isinstance(X, pd.DataFrame) is False:
-            raise ValueError(
-                "X must be a pandas DataFrame."
-            )
+            if isinstance(X, pd.DataFrame) is False:
+                raise ValueError(
+                    "X must be a pandas DataFrame."
+                )
 
-        self_var.feature_df_schema = _infer_data_frame_schema_from_df(X)
+            self_var.feature_df_schema = _infer_data_frame_schema_from_df(X)
 
-        if hasattr(self_var, 'feature_enum_columns'):
-            if self_var.feature_enum_columns:
-                enum_dict = _get_enums_from_data_frame(X, self_var.feature_enum_columns)
-                for feature_column, enum in enum_dict.items():
-                    self_var.feature_df_schema.modify_column(feature_column, enum=enum)
+            if hasattr(self_var, 'feature_enum_columns'):
+                if self_var.feature_enum_columns:
+                    enum_dict = _get_enums_from_data_frame(X, self_var.feature_enum_columns)
+                    for feature_column, enum in enum_dict.items():
+                        self_var.feature_df_schema.modify_column(feature_column, enum=enum)
 
-        if hasattr(self_var, 'feature_interval_columns'):
-            interval_dict = _get_intervals_from_data_frame(X, self_var.feature_interval_columns)
-            for feature_column, interval in interval_dict.items():
-                self_var.feature_df_schema_df_schema.modify_column(feature_column, interval=interval)
+            if hasattr(self_var, 'feature_interval_columns'):
+                if self_var.feature_interval_columns:
+                    interval_dict = _get_intervals_from_data_frame(
+                        X,
+                        self_var.feature_interval_columns,
+                        interval_buffer_percent=interval_buffer_percent,
+                    )
+                    for feature_column, interval in interval_dict.items():
+                        self_var.feature_df_schema.modify_column(feature_column, interval=interval)
 
-        return func(*args)
+            return func(*args)
 
-    return wrapper
+        return wrapper
+    return decorator
 
 
 def infer_target_df_schema_from_fit(func):
@@ -110,9 +117,10 @@ def infer_target_df_schema_from_fit(func):
                     self_var.target_df_schema.modify_column(target_column, enum=enum)
 
         if hasattr(self_var, 'target_interval_columns'):
-            interval_dict = _get_intervals_from_data_frame(y, self_var.target_interval_columns)
-            for target_column, interval in interval_dict.items():
-                self_var.target_df_schema.modify_column(target_column, interval=interval)
+            if self_var.target_interval_columns:
+                interval_dict = _get_intervals_from_data_frame(y, self_var.target_interval_columns)
+                for target_column, interval in interval_dict.items():
+                    self_var.target_df_schema.modify_column(target_column, interval=interval)
 
         return func(*args)
     return wrapper

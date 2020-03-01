@@ -58,7 +58,7 @@ def _pandera_data_frame_schema_from_column_dict(column_dict: Dict) -> pa.DataFra
         if col.enum:
             checks.append(pa.Check.isin(col.enum))
         if col.interval:
-            checks.append(pa.Check(lambda s: s.between(col.interval.start_value, col.interval.end_value)))
+            checks.append(pa.Check.in_range(col.interval.start_value, col.interval.end_value))
 
         if checks:
             data_frame_schema_dict[col.name] = pa.Column(
@@ -151,8 +151,17 @@ def _get_enums_from_data_frame(df: pd.DataFrame, enum_columns: List[str]) -> Dic
     return enum_dict
 
 
-def _get_intervals_from_data_frame(df: pd.DataFrame, interval_columns: List[str]) -> Dict:
-    interval_dict = {col: Interval(df[col].min(), df[col].max()) for col in interval_columns}
+def _get_intervals_from_data_frame(
+        df: pd.DataFrame,
+        interval_columns: List[str],
+        interval_buffer_percent: float,
+) -> Dict:
+    interval_dict = {}
+    for col in interval_columns:
+        min_ = df[col].min()
+        max_ = df[col].max()
+        buffer = (interval_buffer_percent / 100) * (max_ - min_)
+        interval_dict[col] = Interval(min_ - buffer, max_ + buffer)
     return interval_dict
 
 

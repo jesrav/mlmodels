@@ -21,16 +21,16 @@ definitions:
           properties:
 {% for feat in feature_openapi_named_tuple %}
             {{ feat.name }}:
-                format: {{ feat.format }}
-                type: {{ feat.type }}
-    {% if feat.enum %}
-                enum: {{ feat.enum }}
-    {% endif %}
-    {% if feat.min %}
-          minimum: {{ feat.min_ }}
-    {% endif %}
-    {% if feat.max_ %}
-          maximum: {{ feat.max_ }}
+              format: {{ feat.format }}
+              type: {{ feat.type }}
+  {% if feat.enum is not none %}
+              enum: {{ feat.enum }}
+  {% endif %}
+  {% if feat.min_ is not none %}
+              minimum: {{ feat.min_ }}
+  {% endif %}
+  {% if feat.max_ is not none %}
+              maximum: {{ feat.max_ }}
     {% endif %}
 {% endfor %}
         type: array
@@ -45,14 +45,14 @@ definitions:
         {{ target.name }}:
           format: {{ target.format }}
           type: {{ target.type }}
-    {% if target.enum %}
+  {% if target.enum is not none %}
           enum: {{ target.enum }}
-    {% endif %}
-    {% if target.min %}
+  {% endif %}
+  {% if target.min_ is not none %}
           minimum: {{ target.min_ }}
-    {% endif %}
-    {% if target.max_ %}
+  {% endif %}
+  {% if target.max_ is not none%}
           maximum: {{ target.max_ }}
-    {% endif %}
+  {% endif %}
 {% endfor %}
     type: array
