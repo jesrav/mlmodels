@@ -1,5 +1,7 @@
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 import pandas as pd
+from sklearn.linear_model import LogisticRegression
+
 from mlmodels import (
     BaseModel,
     DataFrameModelMixin,
@@ -10,7 +12,7 @@ from mlmodels import (
 
 
 class RandomForestRegressorModel(BaseModel, DataFrameModelMixin):
-    MODEL_NAME = 'Random forest model'
+    MODEL_NAME = 'Random forest regression model'
 
     def __init__(
             self,
@@ -23,8 +25,8 @@ class RandomForestRegressorModel(BaseModel, DataFrameModelMixin):
         self.random_forest_params = random_forest_params
         self.model = RandomForestRegressor(**random_forest_params)
 
-    @infer_feature_df_schema_from_fit
-    @infer_target_df_schema_from_fit
+    @infer_feature_df_schema_from_fit(infer_enums=False, infer_intervals=False)
+    @infer_target_df_schema_from_fit(infer_enums=False)
     def fit(self, X, y):
         self.model.fit(X[self.features], y)
         self.target_columns = y.columns
@@ -38,13 +40,14 @@ class RandomForestRegressorModel(BaseModel, DataFrameModelMixin):
 
 
 class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
-    MODEL_NAME = 'Random forest model'
+    MODEL_NAME = 'Random forest classifier model'
 
     def __init__(
             self,
             features,
             feature_enum_columns=None,
             target_enum_columns=None,
+            feature_interval_columns=None,
             random_forest_params={'n_estimators': 100, 'max_depth': 30},
     ):
         super().__init__()
@@ -52,11 +55,12 @@ class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
         self.target_columns = None,
         self.feature_enum_columns = feature_enum_columns
         self.target_enum_columns = target_enum_columns
+        self.feature_interval_columns = feature_interval_columns
         self.random_forest_params = random_forest_params
         self.model = RandomForestClassifier(**random_forest_params)
 
-    @infer_feature_df_schema_from_fit
-    @infer_target_df_schema_from_fit
+    @infer_feature_df_schema_from_fit(infer_enums=True, infer_intervals=True, interval_buffer_percent=15)
+    @infer_target_df_schema_from_fit(infer_enums=True)
     def fit(self, X, y):
         self.model.fit(X[self.features], y)
         self.target_columns = y.columns

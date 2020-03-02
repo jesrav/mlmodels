@@ -9,12 +9,16 @@ requestBody:
               properties:
 {% for feat in feature_openapi_named_tuple %}
                 {{ feat.name }}:
-                    format: {{ feat.format }}
-                    nullable: False
-                    type: {{ feat.type }}
-                    required: true
-    {% if feat.enum %}
-                    enum: {{ feat.enum }}
+                  format: {{ feat.format }}
+                  type: {{ feat.type }}
+  {% if feat.enum is not none %}
+                  enum: {{ feat.enum }}
+  {% endif %}
+  {% if feat.min_ is not none %}
+                  minimum: {{ feat.min_ }}
+  {% endif %}
+  {% if feat.max_ is not none %}
+                  maximum: {{ feat.max_ }}
     {% endif %}
 {% endfor %}
             type: array
@@ -33,12 +37,16 @@ responses:
 {% for target in target_openapi_named_tuple %}
               {{ target.name }}:
                 format: {{ target.format }}
-                nullable: False
                 type: {{ target.type }}
-                required: true
-    {% if target.enum %}
+  {% if target.enum is not none %}
                 enum: {{ target.enum }}
-    {% endif %}
+  {% endif %}
+  {% if target.min_ is not none %}
+                minimum: {{ target.min_ }}
+  {% endif %}
+  {% if target.max_ is not none %}
+                maximum: {{ target.max_ }}
+  {% endif %}
 {% endfor %}
           type: array
 tags:

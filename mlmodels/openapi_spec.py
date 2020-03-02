@@ -1,8 +1,11 @@
 from pathlib import Path
+from typing import List
+
 from jinja2 import Template
 import yaml
 from collections import namedtuple
 from mlmodels.data_frame_schema import DataFrameSchema
+import pkg_resources
 
 _DTYPE_TO_JSON_TYPE_MAP = {
     'int64': {'type': 'number', 'format': 'integer'},
@@ -12,22 +15,36 @@ _DTYPE_TO_JSON_TYPE_MAP = {
     'O': {'type': 'string'},
 }
 
-openapi_template_path = Path('mlmodels/openapi_templates/openapi_version2.yaml')
+openapi_template_path = pkg_resources.resource_filename(
+    'mlmodels',
+    'openapi_templates/openapi_version2.yaml'
+)
 
-# Named tuple to render data frame column in jinja
-OpenAPICol = namedtuple("OpenAPICol", ["name", "format", "type", 'enum'])
+# Named tuple to render data frame column in jinja2
+OpenAPICol = namedtuple("OpenAPICol", ["name", "format", "type", 'enum', 'min_', 'max_'])
 
 
-def _data_frame_schema_to_open_api_cols(data_frame_schema):
-    open_api_cols = [
-        OpenAPICol(
+def _data_frame_schema_to_open_api_cols(data_frame_schema: DataFrameSchema) -> List[OpenAPICol]:
+    open_api_cols = []
+    for _, col in data_frame_schema.column_dict.items():
+        if hasattr(col.interval, 'start_value'):
+            min_ = col.interval.start_value
+        else:
+            min_ = None
+        if hasattr(col.interval, 'end_value'):
+            max_ = col.interval.end_value
+        else:
+            max_ = None
+
+        openapi_col = OpenAPICol(
             name=col.name,
             format=_DTYPE_TO_JSON_TYPE_MAP[col.dtype]['format'],
             type=_DTYPE_TO_JSON_TYPE_MAP[col.dtype]['type'],
             enum=col.enum,
+            min_=min_,
+            max_=max_,
         )
-        for _, col in data_frame_schema.column_dict.items()
-    ]
+        open_api_cols.append(openapi_col)
     return open_api_cols
 
 
@@ -47,7 +64,7 @@ def open_api_yaml_specification(
     str
         YAML representation of the open API spec for the the model predictions.
     """
-    with open('mlmodels/openapi_templates/openapi_version2.yaml') as f:
+    with open(openapi_template_path) as f:
         t = Template(f.read())
     return t.render(
         feature_openapi_named_tuple=_data_frame_schema_to_open_api_cols(feature_df_schema),

@@ -1,11 +1,14 @@
 from functools import wraps
+from typing import Union
+
 import pandas as pd
 import mlflow.pyfunc
 
 from mlmodels.data_frame_schema import (
     DataFrameSchema,
-    _infer_data_frame_schema_from_df,
+    _get_data_frame_schema_from_df,
     _get_enums_from_data_frame,
+    _get_intervals_from_data_frame,
 )
 from mlmodels.base_classes import BaseModel
 from mlmodels.openapi_spec import open_api_yaml_specification, open_api_dict_specification
@@ -57,54 +60,107 @@ class DataFrameModelMixin:
 ########################################################################################################
 # Decorators to help create models from DataFrameModel class.
 ########################################################################################################
-def infer_feature_df_schema_from_fit(func):
-    @wraps(func)
-    def wrapper(*args):
-        self_var = args[0]
-        X = args[1]
-        y = args[2]
+def infer_feature_df_schema_from_fit(
+    infer_enums: bool,
+    infer_intervals: bool,
+    interval_buffer_percent: Union[float, None] = None
+):
+    """
+    Parameters
+    ----------
+    infer_enums: bool
+        Whether or not to infer the possible values of certain categorical features.
+        The attribute feature_enum_columns must be set on the model class.
+        The attribute should be a list of feature names for the categorical features
+    infer_intervals: bool
+        Whether or not to infer the possible range of values of certain continuous features.
+        The attribute feature_interval_columns must be set on the model class.
+        The attribute should be a list of feature names for the continuous features we wish to infer
+        intervals for.
+    interval_buffer_percent: float
+        The percentage buffer we wish to add to the ends of the intervals we infer from the data.
+    """
+    if infer_intervals and interval_buffer_percent is None:
+        raise ValueError('If infer_intervals is true, the interval_buffer_percent must be set to a number.')
 
-        if isinstance(X, pd.DataFrame) is False:
-            raise ValueError(
-                "X must be a pandas DataFrame."
-            )
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args):
+            self_var = args[0]
+            X = args[1]
+            y = args[2]
 
-        self_var.feature_df_schema = _infer_data_frame_schema_from_df(X)
+            if isinstance(X, pd.DataFrame) is False:
+                raise ValueError(
+                    "X must be a pandas DataFrame."
+                )
 
-        if hasattr(self_var, 'feature_enum_columns'):
-            if self_var.feature_enum_columns:
+            self_var.feature_df_schema = _get_data_frame_schema_from_df(X)
+
+            if infer_enums:
+                if not hasattr(self_var, 'feature_enum_columns'):
+                    raise AttributeError(
+                        'feature_enum_columns must be attribute on model class to infer enum values.'
+                    )
                 enum_dict = _get_enums_from_data_frame(X, self_var.feature_enum_columns)
                 for feature_column, enum in enum_dict.items():
                     self_var.feature_df_schema.modify_column(feature_column, enum=enum)
 
-        return func(*args)
+            if infer_intervals:
+                if not hasattr(self_var, 'feature_interval_columns'):
+                    raise AttributeError(
+                        'feature_interval_columns must be attribute on model class to infer intervals.'
+                    )
+                interval_dict = _get_intervals_from_data_frame(
+                    X,
+                    self_var.feature_interval_columns,
+                    interval_buffer_percent=interval_buffer_percent,
+                )
+                for feature_column, interval in interval_dict.items():
+                    self_var.feature_df_schema.modify_column(feature_column, interval=interval)
 
-    return wrapper
+            return func(*args)
+
+        return wrapper
+    return decorator
 
 
-def infer_target_df_schema_from_fit(func):
+def infer_target_df_schema_from_fit(infer_enums: bool):
+    """
+    Parameters
+    ----------
+    infer_enums: bool
+        Whether or not to infer the possible values of certain categorical features.
+        The attribute feature_enum_columns must be set on the model class.
+        The attribute should be a list of feature names for the categorical features
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args):
+            self_var = args[0]
+            X = args[1]
+            y = args[2]
 
-    @wraps(func)
-    def wrapper(*args):
-        self_var = args[0]
-        X = args[1]
-        y = args[2]
+            if isinstance(y, pd.DataFrame) is False:
+                raise ValueError(
+                    "y must be a pandas DataFrame."
+                )
 
-        if isinstance(y, pd.DataFrame) is False:
-            raise ValueError(
-                "y must be a pandas DataFrame."
-            )
+            self_var.target_df_schema = _get_data_frame_schema_from_df(y)
 
-        self_var.target_df_schema = _infer_data_frame_schema_from_df(y)
-
-        if hasattr(self_var, 'target_enum_columns'):
-            if self_var.target_enum_columns:
+            if infer_enums:
+                if not hasattr(self_var, 'target_enum_columns'):
+                    raise AttributeError(
+                        'target_enum_columns must be attribute on model class to infer enum values.'
+                    )
                 enum_dict = _get_enums_from_data_frame(y, self_var.target_enum_columns)
                 for target_column, enum in enum_dict.items():
                     self_var.target_df_schema.modify_column(target_column, enum=enum)
 
-        return func(*args)
-    return wrapper
+            return func(*args)
+
+        return wrapper
+    return decorator
 
 
 def validate_prediction_input_and_output(func):
@@ -119,11 +175,11 @@ def validate_prediction_input_and_output(func):
                 "X must be a pandas DataFrame."
             )
 
-        _ = self_var.feature_df_schema.validate_df(X)
+        X = self_var.feature_df_schema.validate_df(X)
 
         return_values = func(*args)
 
-        _ = self_var.target_df_schema.validate_df(return_values)
+        return_values = self_var.target_df_schema.validate_df(return_values)
 
         return return_values
 
@@ -138,22 +194,18 @@ class FeatureSplitModel(BaseModel, DataFrameModelMixin):
 
     def __init__(
             self,
-            features=None,
-            feature_enum_columns=None,
-            target_enum_columns=None,
-            group_column=None,
-            group_model_dict=None
+            features,
+            group_column,
+            group_model_dict,
     ):
         super().__init__()
         self.features = features
-        self.target_columns = None,
-        self.feature_enum_columns = feature_enum_columns,
-        self.target_enum_columns = target_enum_columns,
-        self.group_model_dict = group_model_dict
         self.group_column = group_column
+        self.group_model_dict = group_model_dict
+        self.target_columns = None
 
-    @infer_target_df_schema_from_fit
-    @infer_target_df_schema_from_fit
+    @infer_target_df_schema_from_fit(infer_enums=False)
+    @infer_feature_df_schema_from_fit(infer_enums=False, infer_intervals=False)
     def fit(self, X, y):
         assert X.shape[0] == y.shape[0], "X and y must have same number of rows"
         assert self.group_column in X.columns, f"{self.group_column} must be a columns in X"
@@ -164,16 +216,17 @@ class FeatureSplitModel(BaseModel, DataFrameModelMixin):
 
         self.target_columns = y.columns
 
-    @validate_prediction_input_and_output
+    # @validate_prediction_input_and_output
     def predict(self, X):
         assert isinstance(X, pd.DataFrame), "X must be a Pandas data frame"
         assert self.group_column in X.columns, f"{self.group_column} must be a columns in X"
         X = X.copy()
-        X['prediction'] = float('NaN')
+
+        X.append(pd.Series(name='prediction'))
         for group in X[self.group_column].unique():
             mask = (X[self.group_column] == group)
             X.loc[mask, 'prediction'] = self.group_model_dict[group].predict(X[mask])
-            prediction_df = pd.DataFrame(data=X['prediction'].values, columns=self.target_columns)
+            prediction_df = pd.DataFrame(data=X['prediction'], columns=self.target_columns)
         return prediction_df
 
 

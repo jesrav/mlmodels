@@ -20,11 +20,11 @@ class BaseModel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def fit(self):
+    def fit(self, X, y):
         pass
 
     @abstractmethod
-    def predict(self):
+    def predict(self, X):
         pass
 
     def __str__(self):
@@ -79,11 +79,11 @@ class BaseTransformer(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def fit(self):
+    def fit(self, X):
         pass
 
     @abstractmethod
-    def transform(self):
+    def transform(self, X):
         pass
 
     def __str__(self):

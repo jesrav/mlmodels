@@ -46,6 +46,8 @@ if __name__ == '__main__':
     model = RandomForestClassifierModel(
         features=train_x.columns,
         feature_enum_columns=['group1', 'group2'],
+        target_enum_columns=['quality'],
+        feature_interval_columns=['fixed acidity', 'volatile acidity', 'citric acid'],
         random_forest_params={'n_estimators': 100, 'max_depth': 15},
     )
     model.fit(train_x, train_y)
