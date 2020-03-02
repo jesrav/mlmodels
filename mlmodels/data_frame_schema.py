@@ -141,7 +141,7 @@ class DataFrameSchema:
         return f'DataFrameSchema{{columns: {self.column_dict}}}'
 
 
-def _infer_data_frame_schema_from_df(df: pd.DataFrame) -> DataFrameSchema:
+def _get_data_frame_schema_from_df(df: pd.DataFrame) -> DataFrameSchema:
     dtype_dict = df.dtypes.astype(str).to_dict()
     return DataFrameSchema([Column(k, dtype_dict[k]) for k in dtype_dict])
 

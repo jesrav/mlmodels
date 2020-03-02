@@ -1,10 +1,12 @@
 from functools import wraps
+from typing import Union
+
 import pandas as pd
 import mlflow.pyfunc
 
 from mlmodels.data_frame_schema import (
     DataFrameSchema,
-    _infer_data_frame_schema_from_df,
+    _get_data_frame_schema_from_df,
     _get_enums_from_data_frame,
     _get_intervals_from_data_frame,
 )
@@ -58,7 +60,29 @@ class DataFrameModelMixin:
 ########################################################################################################
 # Decorators to help create models from DataFrameModel class.
 ########################################################################################################
-def infer_feature_df_schema_from_fit(interval_buffer_percent=15):
+def infer_feature_df_schema_from_fit(
+    infer_enums: bool,
+    infer_intervals: bool,
+    interval_buffer_percent: Union[float, None] = None
+):
+    """
+    Parameters
+    ----------
+    infer_enums: bool
+        Whether or not to infer the possible values of certain categorical features.
+        The attribute feature_enum_columns must be set on the model class.
+        The attribute should be a list of feature names for the categorical features
+    infer_intervals: bool
+        Whether or not to infer the possible range of values of certain continuous features.
+        The attribute feature_interval_columns must be set on the model class.
+        The attribute should be a list of feature names for the continuous features we wish to infer
+        intervals for.
+    interval_buffer_percent: float
+        The percentage buffer we wish to add to the ends of the intervals we infer from the data.
+    """
+    if infer_intervals and interval_buffer_percent is None:
+        raise ValueError('If infer_intervals is true, the interval_buffer_percent must be set to a number.')
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args):
@@ -71,23 +95,29 @@ def infer_feature_df_schema_from_fit(interval_buffer_percent=15):
                     "X must be a pandas DataFrame."
                 )
 
-            self_var.feature_df_schema = _infer_data_frame_schema_from_df(X)
+            self_var.feature_df_schema = _get_data_frame_schema_from_df(X)
 
-            if hasattr(self_var, 'feature_enum_columns'):
-                if self_var.feature_enum_columns:
-                    enum_dict = _get_enums_from_data_frame(X, self_var.feature_enum_columns)
-                    for feature_column, enum in enum_dict.items():
-                        self_var.feature_df_schema.modify_column(feature_column, enum=enum)
-
-            if hasattr(self_var, 'feature_interval_columns'):
-                if self_var.feature_interval_columns:
-                    interval_dict = _get_intervals_from_data_frame(
-                        X,
-                        self_var.feature_interval_columns,
-                        interval_buffer_percent=interval_buffer_percent,
+            if infer_enums:
+                if not hasattr(self_var, 'feature_enum_columns'):
+                    raise AttributeError(
+                        'feature_enum_columns must be attribute on model class to infer enum values.'
                     )
-                    for feature_column, interval in interval_dict.items():
-                        self_var.feature_df_schema.modify_column(feature_column, interval=interval)
+                enum_dict = _get_enums_from_data_frame(X, self_var.feature_enum_columns)
+                for feature_column, enum in enum_dict.items():
+                    self_var.feature_df_schema.modify_column(feature_column, enum=enum)
+
+            if infer_intervals:
+                if not hasattr(self_var, 'feature_interval_columns'):
+                    raise AttributeError(
+                        'feature_interval_columns must be attribute on model class to infer intervals.'
+                    )
+                interval_dict = _get_intervals_from_data_frame(
+                    X,
+                    self_var.feature_interval_columns,
+                    interval_buffer_percent=interval_buffer_percent,
+                )
+                for feature_column, interval in interval_dict.items():
+                    self_var.feature_df_schema.modify_column(feature_column, interval=interval)
 
             return func(*args)
 
@@ -95,35 +125,42 @@ def infer_feature_df_schema_from_fit(interval_buffer_percent=15):
     return decorator
 
 
-def infer_target_df_schema_from_fit(func):
+def infer_target_df_schema_from_fit(infer_enums: bool):
+    """
+    Parameters
+    ----------
+    infer_enums: bool
+        Whether or not to infer the possible values of certain categorical features.
+        The attribute feature_enum_columns must be set on the model class.
+        The attribute should be a list of feature names for the categorical features
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args):
+            self_var = args[0]
+            X = args[1]
+            y = args[2]
 
-    @wraps(func)
-    def wrapper(*args):
-        self_var = args[0]
-        X = args[1]
-        y = args[2]
+            if isinstance(y, pd.DataFrame) is False:
+                raise ValueError(
+                    "y must be a pandas DataFrame."
+                )
 
-        if isinstance(y, pd.DataFrame) is False:
-            raise ValueError(
-                "y must be a pandas DataFrame."
-            )
+            self_var.target_df_schema = _get_data_frame_schema_from_df(y)
 
-        self_var.target_df_schema = _infer_data_frame_schema_from_df(y)
-
-        if hasattr(self_var, 'target_enum_columns'):
-            if self_var.target_enum_columns:
+            if infer_enums:
+                if not hasattr(self_var, 'target_enum_columns'):
+                    raise AttributeError(
+                        'target_enum_columns must be attribute on model class to infer enum values.'
+                    )
                 enum_dict = _get_enums_from_data_frame(y, self_var.target_enum_columns)
                 for target_column, enum in enum_dict.items():
                     self_var.target_df_schema.modify_column(target_column, enum=enum)
 
-        if hasattr(self_var, 'target_interval_columns'):
-            if self_var.target_interval_columns:
-                interval_dict = _get_intervals_from_data_frame(y, self_var.target_interval_columns)
-                for target_column, interval in interval_dict.items():
-                    self_var.target_df_schema.modify_column(target_column, interval=interval)
+            return func(*args)
 
-        return func(*args)
-    return wrapper
+        return wrapper
+    return decorator
 
 
 def validate_prediction_input_and_output(func):
