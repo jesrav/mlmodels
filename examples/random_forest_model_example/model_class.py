@@ -59,7 +59,7 @@ class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
         self.random_forest_params = random_forest_params
         self.model = RandomForestClassifier(**random_forest_params)
 
-    @infer_feature_df_schema_from_fit(infer_enums=True, infer_intervals=True, interval_buffer_percent=15)
+    @infer_feature_df_schema_from_fit(infer_enums=True, infer_intervals=True, interval_buffer_percent=25)
     @infer_target_df_schema_from_fit(infer_enums=True)
     def fit(self, X, y):
         self.model.fit(X[self.features], y)

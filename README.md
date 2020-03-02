@@ -51,6 +51,7 @@ It adds the following methods:
 - get_open_api_yaml/get_open_api_dict: Generating an open api specification.
 
 The DataFrameModelMixin class can be used in combination with the accompanying decorators to infer the feature and target schema on fit and validate new data on predict.
+Alternatively one can set the feature and target schema before or after fitting the model.
 
 ### Example use
 ```python
@@ -66,6 +67,7 @@ from mlmodels import (
     validate_prediction_input_and_output
 )
 
+# Create data frame model class where the feature and target schema are infered when the model is fitted.
 class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
     MODEL_NAME = 'Random forest classifier model'
 
@@ -80,13 +82,13 @@ class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
         super().__init__()
         self.features = features
         self.target_columns = None,
-        self.feature_enum_columns = feature_enum_columns
-        self.target_enum_columns = target_enum_columns
-        self.feature_interval_columns = feature_interval_columns
+        self.feature_enum_columns = feature_enum_columns    # Needs to be set to infer enums for ceartain features.
+        self.target_enum_columns = target_enum_columns      # Needs to be set to infer enums for certain of the target columns.
+        self.feature_interval_columns = feature_interval_columns    # Needs to be set to infer the range/interval of accepted values for certain continous features. 
         self.random_forest_params = random_forest_params
         self.model = RandomForestClassifier(**random_forest_params)
 
-    @infer_feature_df_schema_from_fit(infer_enums=True, infer_intervals=True, interval_buffer_percent=15)
+    @infer_feature_df_schema_from_fit(infer_enums=True, infer_intervals=True, interval_buffer_percent=25)
     @infer_target_df_schema_from_fit(infer_enums=True)
     def fit(self, X, y):
         self.model.fit(X[self.features], y)
@@ -103,7 +105,7 @@ class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
 csv_url = 'http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv'
 data = pd.read_csv(csv_url, sep=';')
 
-# Create 3 randomly assigned groups
+# Create some categorical features
 data['group1'] = np.random.choice(3, len(data))
 data['group2'] = np.random.choice([3, 7], len(data))
 data['group1'] = data['group1'].astype('int64')
@@ -118,7 +120,7 @@ test_x = test.drop(["quality"], axis=1)
 train_y = train[["quality"]]
 test_y = test[["quality"]]
 
-# Fit model, make predictions and evaluate
+# Initialize a model
 model = RandomForestClassifierModel(
     features=train_x.columns,
     feature_enum_columns=['group1', 'group2'],
@@ -126,8 +128,9 @@ model = RandomForestClassifierModel(
     feature_interval_columns=['fixed acidity', 'volatile acidity', 'citric acid'],
     random_forest_params={'n_estimators': 100, 'max_depth': 15},
 )
-model.fit(train_x, train_y)
 
+# Fit model, make predictions and evaluate
+model.fit(train_x, train_y)
 predicted_qualities = model.predict(test_x)
 ```
 ### Model input schema validation
@@ -149,6 +152,13 @@ test_x_copy.group1 = 100
 model.predict(test_x_copy)
 # returns: pandera.errors.SchemaError: <Schema Column: 'group1' type=int64> failed element-wise validator 0:
 # <Check _isin: isin(frozenset({0, 1, 2}))>
+
+# Example of value outside of accepted interval.
+test_x_copy = test_x.copy()
+test_x_copy.group1 = 100.0
+model.predict(test_x_copy)
+# returns: pandera.errors.SchemaError: <Schema Column: 'fixed acidity' type=float64> failed element-wise validator 0:
+# <Check _in_range: in_range(1.7749999999999995, 18.725)>
 ```
 
 ## Creating MLFLOW pyfunc model
@@ -159,13 +169,14 @@ mlflow_model = MLFlowWrapper(model)
 ```
 
 ### Building a docker image with a model service
+You can deploy a data frame model as a web service with Open API documentation and validation.
 The model must wrapped as an mlflow.pyfunc model and must inherit from the BaseModel and DataFrameModelMixin
 
-First we train and save a model locally. You need to use python 3.6.7 or update the python version in examples/random_forest_model_example/conda.yaml.
+To try it out, first we train and save a model locally. You need to use python 3.6.7 or update the python version in examples/random_forest_model_example/conda.yaml.
 ```console
 python examples/random_forest_model_example/wine_example.py
 ```
-Then we build a docker image for serving the model as a web API. 
+Next build a docker image for serving the model using the cli. 
 ```console
 mlmodels dockerize examples/random_forest_model_example/model_output/wine_model 1 model-service:latest
 ```
