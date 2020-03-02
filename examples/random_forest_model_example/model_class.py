@@ -1,5 +1,7 @@
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 import pandas as pd
+from sklearn.linear_model import LogisticRegression
+
 from mlmodels import (
     BaseModel,
     DataFrameModelMixin,

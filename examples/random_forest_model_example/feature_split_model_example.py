@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.datasets import load_boston
 from mlmodels import FeatureSplitModel
 from model_class import RandomForestRegressorModel
 from mlmodels import MLFlowWrapper
@@ -24,34 +25,33 @@ if __name__ == '__main__':
     model_path = str(dir_path / Path('model_output/feature_split_model'))
     conda_env_path = str(dir_path / Path('conda.yaml'))
 
-    # Read the wine-quality csv file from the URL
-    csv_url = 'http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv'
-    data = pd.read_csv(csv_url, sep=';')
-
-    # Create 3 randomly assigned groups
-    data['group'] = np.random.choice(['group1', 'group2'], len(data))
+    # Load Boston housing data
+    boston = load_boston()
+    x = pd.DataFrame(boston.data)
+    x.columns = boston.feature_names
+    x['group'] = np.random.choice(['group1', 'group2'], len(x))
+    y = pd.DataFrame(boston.target)
+    y.columns = ['price']
 
     # Split the data into training and test sets. (0.75, 0.25) split.
-    train, test = train_test_split(data)
-
-    # The predicted column is "quality" which is a scalar from [3, 9]
-    train_x = train.drop(["quality"], axis=1)
-    test_x = test.drop(["quality"], axis=1)
-    train_y = train[["quality"]]
-    test_y = test[["quality"]]
+    train_x, test_x, train_y, test_y = train_test_split(x, y)
 
     # Create dictionary of individual models. In this cas all the same.
-    features_individual_models = ["density", "chlorides", "alcohol"]
+    features_individual_models = [
+        "AGE",
+        "B",
+        "CHAS",
+        "CRIM",
+    ]
+
     group_model_dict = {group: RandomForestRegressorModel(
         features=features_individual_models,
-        random_forest_params={'n_estimators': 100, 'max_depth': 15}
-    ) for group in data['group'].unique()}
+    ) for group in x['group'].unique()}
 
     # Create feature split model
     features = features_individual_models + ["group"]
     model = FeatureSplitModel(
         features=features,
-        feature_enum_columns=['group'],
         group_column="group",
         group_model_dict=group_model_dict
     )

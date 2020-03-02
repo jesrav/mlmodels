@@ -175,11 +175,11 @@ def validate_prediction_input_and_output(func):
                 "X must be a pandas DataFrame."
             )
 
-        _ = self_var.feature_df_schema.validate_df(X)
+        X = self_var.feature_df_schema.validate_df(X)
 
         return_values = func(*args)
 
-        _ = self_var.target_df_schema.validate_df(return_values)
+        return_values = self_var.target_df_schema.validate_df(return_values)
 
         return return_values
 
@@ -194,22 +194,18 @@ class FeatureSplitModel(BaseModel, DataFrameModelMixin):
 
     def __init__(
             self,
-            features=None,
-            feature_enum_columns=None,
-            target_enum_columns=None,
-            group_column=None,
-            group_model_dict=None
+            features,
+            group_column,
+            group_model_dict,
     ):
         super().__init__()
         self.features = features
-        self.target_columns = None,
-        self.feature_enum_columns = feature_enum_columns,
-        self.target_enum_columns = target_enum_columns,
-        self.group_model_dict = group_model_dict
         self.group_column = group_column
+        self.group_model_dict = group_model_dict
+        self.target_columns = None
 
-    @infer_target_df_schema_from_fit
-    @infer_target_df_schema_from_fit
+    @infer_target_df_schema_from_fit(infer_enums=False)
+    @infer_feature_df_schema_from_fit(infer_enums=False, infer_intervals=False)
     def fit(self, X, y):
         assert X.shape[0] == y.shape[0], "X and y must have same number of rows"
         assert self.group_column in X.columns, f"{self.group_column} must be a columns in X"
@@ -220,16 +216,17 @@ class FeatureSplitModel(BaseModel, DataFrameModelMixin):
 
         self.target_columns = y.columns
 
-    @validate_prediction_input_and_output
+    # @validate_prediction_input_and_output
     def predict(self, X):
         assert isinstance(X, pd.DataFrame), "X must be a Pandas data frame"
         assert self.group_column in X.columns, f"{self.group_column} must be a columns in X"
         X = X.copy()
-        X['prediction'] = float('NaN')
+
+        X.append(pd.Series(name='prediction'))
         for group in X[self.group_column].unique():
             mask = (X[self.group_column] == group)
             X.loc[mask, 'prediction'] = self.group_model_dict[group].predict(X[mask])
-            prediction_df = pd.DataFrame(data=X['prediction'].values, columns=self.target_columns)
+            prediction_df = pd.DataFrame(data=X['prediction'], columns=self.target_columns)
         return prediction_df
 
 
