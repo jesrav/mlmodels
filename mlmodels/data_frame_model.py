@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import Union
+from typing import Union, Dict, List
 
 import pandas as pd
 import mlflow.pyfunc
@@ -9,9 +9,72 @@ from mlmodels.data_frame_schema import (
     _get_data_frame_schema_from_df,
     _get_enums_from_data_frame,
     _get_intervals_from_data_frame,
-)
+    Interval)
 from mlmodels.base_classes import BaseModel
 from mlmodels.openapi_spec import open_api_yaml_specification, open_api_dict_specification
+
+
+class ModelMethodSchema:
+
+    def __init__(
+            self,
+            method_name: str,
+    ):
+        self.method_name = method_name
+        self.input_schema = None
+        self.output_schema = None
+
+    def set_input_schema(self, input_schema: DataFrameSchema):
+        if not isinstance(input_schema, DataFrameSchema):
+            raise TypeError('input_schema most be a DataFrameSchema instance.')
+        self.input_schema = input_schema
+
+    def set_output_schema(self, output_schema: DataFrameSchema):
+        if not isinstance(output_schema, DataFrameSchema):
+            raise TypeError('output_schema most be a DataFrameSchema instance.')
+        self.output_schema = output_schema
+
+    # def modify_input_schema_column(
+    #         self,
+    #         column_name: str,
+    #         dtype: Union[str, None] = None,
+    #         enum: Union[List[str], None] = None,
+    #         interval: Union[Interval, None] = None,
+    # ):
+    #     if self.input_schema is None:
+    #         raise AttributeError('Attribute input_schema must be set.')
+    #
+    #     self.input_schema = self.input_schema.modify_column(
+    #         column_name=column_name,
+    #         dtype=dtype,
+    #         enum=enum,
+    #         interval=interval
+    #         )
+    #
+    # def modify_output_schema_column(
+    #         self,
+    #         column_name: str,
+    #         dtype: Union[str, None] = None,
+    #         enum: Union[List[str], None] = None,
+    #         interval: Union[Interval, None] = None,
+    # ):
+    #     if self.output_schema is None:
+    #         raise AttributeError('Attribute output_schema must be set.')
+    #
+    #     self.output_schema.modify_column(
+    #         column_name=column_name,
+    #         dtype=dtype,
+    #         enum=enum,
+    #         interval=interval
+    #         )
+
+
+    def __repr__(self):
+        return (
+            f'ModelMethodSchema{{method_name: {self.method_name},\n'
+            f'input_schema: {self.input_schema},\n'
+            f'output_schema: {self.output_schema}}}'
+        )
 
 
 ########################################################################################################
@@ -24,37 +87,44 @@ class DataFrameModelMixin:
     Pandas DataFrame as input and produces predictions in the form of a Pandas DataFrame.
     """
 
-    def set_feature_df_schema(self, feature_df_schema:DataFrameSchema):
-        self.feature_df_schema = feature_df_schema
+    def set_model_method_schema(self, model_method_schema: ModelMethodSchema):
+        if not hasattr(self, 'model_method_schema_dict'):
+            self.model_method_schema_dict = {}
+        if model_method_schema.method_name in self.model_method_schema_dict:
+            raise ValueError(f'{model_method_schema.method_name} has already been set.')
+        self_methods = [method_name for method_name in dir(self)
+                          if callable(getattr(self, method_name))]
+        if model_method_schema.method_name not in self_methods:
+            raise ValueError(
+                f'{model_method_schema.method_name} is not a method in {self}.'
+            )
+        self.model_method_schema_dict[model_method_schema.method_name] = model_method_schema
 
-    def set_target_df_schema(self, target_df_schema:DataFrameSchema):
-        self.target_df_schema = target_df_schema
-
-    def get_open_api_yaml(self):
-        """Get the open API spec for the the model predictions in a YAML representation.
-
-        Returns
-        -------
-        str
-           YAML representation of the open API spec for the the model predictions
-        """
-        return open_api_yaml_specification(
-            feature_df_schema=self.feature_df_schema,
-            target_df_schema=self.target_df_schema
-        )
-
-    def get_open_api_dict(self):
-        """Get the open API spec for the the model predictions in a dictionary representation.
-
-        Returns
-        -------
-        dict
-           Dictionary representation of the open API spec for the the model predictions
-        """
-        return open_api_dict_specification(
-            feature_df_schema=self.feature_df_schema,
-            target_df_schema=self.target_df_schema
-        )
+    # def get_open_api_yaml(self):
+    #     """Get the open API spec for the the model predictions in a YAML representation.
+    #
+    #     Returns
+    #     -------
+    #     str
+    #        YAML representation of the open API spec for the the model predictions
+    #     """
+    #     return open_api_yaml_specification(
+    #         feature_df_schema=self.feature_df_schema,
+    #         target_df_schema=self.target_df_schema
+    #     )
+    #
+    # def get_open_api_dict(self):
+    #     """Get the open API spec for the the model predictions in a dictionary representation.
+    #
+    #     Returns
+    #     -------
+    #     dict
+    #        Dictionary representation of the open API spec for the the model predictions
+    #     """
+    #     return open_api_dict_specification(
+    #         feature_df_schema=self.feature_df_schema,
+    #         target_df_schema=self.target_df_schema
+    #     )
 
 
 ########################################################################################################
@@ -95,29 +165,35 @@ def infer_feature_df_schema_from_fit(
                     "X must be a pandas DataFrame."
                 )
 
-            self_var.feature_df_schema = _get_data_frame_schema_from_df(X)
+            if not hasattr(self_var, 'model_method_schema_dict'):
+                self_var.model_method_schema_dict = {}
 
-            if infer_enums:
-                if not hasattr(self_var, 'feature_enum_columns'):
-                    raise AttributeError(
-                        'feature_enum_columns must be attribute on model class to infer enum values.'
-                    )
-                enum_dict = _get_enums_from_data_frame(X, self_var.feature_enum_columns)
-                for feature_column, enum in enum_dict.items():
-                    self_var.feature_df_schema.modify_column(feature_column, enum=enum)
+            if func.__name__ not in self_var.model_method_schema_dict:
+                self_var.model_method_schema_dict['predict'] = {}
 
-            if infer_intervals:
-                if not hasattr(self_var, 'feature_interval_columns'):
-                    raise AttributeError(
-                        'feature_interval_columns must be attribute on model class to infer intervals.'
-                    )
-                interval_dict = _get_intervals_from_data_frame(
-                    X,
-                    self_var.feature_interval_columns,
-                    interval_buffer_percent=interval_buffer_percent,
-                )
-                for feature_column, interval in interval_dict.items():
-                    self_var.feature_df_schema.modify_column(feature_column, interval=interval)
+            self_var.model_method_schema_dict['predict']['input_schema'] = _get_data_frame_schema_from_df(X)
+
+            # if infer_enums:
+            #     if not hasattr(self_var, 'feature_enum_columns'):
+            #         raise AttributeError(
+            #             'feature_enum_columns must be attribute on model class to infer enum values.'
+            #         )
+            #     enum_dict = _get_enums_from_data_frame(X, self_var.feature_enum_columns)
+            #     for feature_column, enum in enum_dict.items():
+            #         self_var.feature_df_schema.modify_column(feature_column, enum=enum)
+            #
+            # if infer_intervals:
+            #     if not hasattr(self_var, 'feature_interval_columns'):
+            #         raise AttributeError(
+            #             'feature_interval_columns must be attribute on model class to infer intervals.'
+            #         )
+            #     interval_dict = _get_intervals_from_data_frame(
+            #         X,
+            #         self_var.feature_interval_columns,
+            #         interval_buffer_percent=interval_buffer_percent,
+            #     )
+            #     for feature_column, interval in interval_dict.items():
+            #         self_var.feature_df_schema.modify_column(feature_column, interval=interval)
 
             return func(*args)
 
@@ -146,16 +222,22 @@ def infer_target_df_schema_from_fit(infer_enums: bool):
                     "y must be a pandas DataFrame."
                 )
 
-            self_var.target_df_schema = _get_data_frame_schema_from_df(y)
+            if not hasattr(self_var, 'model_method_schema_dict'):
+                self_var.model_method_schema_dict = {}
 
-            if infer_enums:
-                if not hasattr(self_var, 'target_enum_columns'):
-                    raise AttributeError(
-                        'target_enum_columns must be attribute on model class to infer enum values.'
-                    )
-                enum_dict = _get_enums_from_data_frame(y, self_var.target_enum_columns)
-                for target_column, enum in enum_dict.items():
-                    self_var.target_df_schema.modify_column(target_column, enum=enum)
+            if func.__name__ not in self_var.model_method_schema_dict:
+                self_var.model_method_schema_dict['predict'] = {}
+
+            self_var.model_method_schema_dict['predict']['output_schema'] = _get_data_frame_schema_from_df(y)
+
+            # if infer_enums:
+            #     if not hasattr(self_var, 'target_enum_columns'):
+            #         raise AttributeError(
+            #             'target_enum_columns must be attribute on model class to infer enum values.'
+            #         )
+            #     enum_dict = _get_enums_from_data_frame(y, self_var.target_enum_columns)
+            #     for target_column, enum in enum_dict.items():
+            #         self_var.target_df_schema.modify_column(target_column, enum=enum)
 
             return func(*args)
 

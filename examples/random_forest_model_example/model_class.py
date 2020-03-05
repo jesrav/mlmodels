@@ -71,3 +71,31 @@ class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
         predictions_array = self.model.predict(X[self.features])
         predictions_df = pd.DataFrame(data=predictions_array, columns=self.target_columns)
         return predictions_df
+
+
+class TestModel(BaseModel, DataFrameModelMixin):
+    MODEL_NAME = 'Random forest classifier model'
+
+    def __init__(
+            self,
+            features,
+            feature_interval_columns=None,
+            random_forest_params={'n_estimators': 100, 'max_depth': 30},
+    ):
+        super().__init__()
+        self.features = features
+        self.target_columns = None,
+        self.random_forest_params = random_forest_params
+        self.model = RandomForestClassifier(**random_forest_params)
+
+    # @infer_feature_df_schema_from_fit(infer_enums=True, infer_intervals=True, interval_buffer_percent=25)
+    # @infer_target_df_schema_from_fit(infer_enums=True)
+    def fit(self, X, y):
+        self.model.fit(X[self.features], y)
+        self.target_columns = y.columns
+        return self
+
+    def predict(self, X):
+        predictions_array = self.model.predict(X[self.features])
+        predictions_df = pd.DataFrame(data=predictions_array, columns=self.target_columns)
+        return predictions_df
