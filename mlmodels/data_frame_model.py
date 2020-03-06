@@ -6,7 +6,7 @@ import mlflow.pyfunc
 
 from mlmodels.data_frame_schema import (
     DataFrameSchema,
-    _get_data_frame_schema_from_df,
+    get_data_frame_schema_from_df,
     _get_enums_from_data_frame,
     _get_intervals_from_data_frame,
     Interval)
@@ -34,46 +34,34 @@ class ModelMethodSchema:
             raise TypeError('output_schema most be a DataFrameSchema instance.')
         self.output_schema = output_schema
 
-    # def modify_input_schema_column(
-    #         self,
-    #         column_name: str,
-    #         dtype: Union[str, None] = None,
-    #         enum: Union[List[str], None] = None,
-    #         interval: Union[Interval, None] = None,
-    # ):
-    #     if self.input_schema is None:
-    #         raise AttributeError('Attribute input_schema must be set.')
-    #
-    #     self.input_schema = self.input_schema.modify_column(
-    #         column_name=column_name,
-    #         dtype=dtype,
-    #         enum=enum,
-    #         interval=interval
-    #         )
-    #
-    # def modify_output_schema_column(
-    #         self,
-    #         column_name: str,
-    #         dtype: Union[str, None] = None,
-    #         enum: Union[List[str], None] = None,
-    #         interval: Union[Interval, None] = None,
-    # ):
-    #     if self.output_schema is None:
-    #         raise AttributeError('Attribute output_schema must be set.')
-    #
-    #     self.output_schema.modify_column(
-    #         column_name=column_name,
-    #         dtype=dtype,
-    #         enum=enum,
-    #         interval=interval
-    #         )
-
-
     def __repr__(self):
         return (
             f'ModelMethodSchema{{method_name: {self.method_name},\n'
             f'input_schema: {self.input_schema},\n'
             f'output_schema: {self.output_schema}}}'
+        )
+
+
+class ModelMethodColumnInfo:
+    def __init__(
+            self,
+            method_name: str,
+            input_enum_columns: List[str] = None,
+            output_enum_columns: List[str] = None,
+            input_interval_columns: List[Interval] = None,
+
+    ):
+        self.method_name = method_name
+        self.input_enum_columns = input_enum_columns
+        self.output_enum_columns = output_enum_columns
+        self.input_interval_columns = input_interval_columns
+
+    def __repr__(self):
+        return (
+            f'ModelMethodColumnInfo{{method_name: {self.method_name},\n'
+            f'input_enum_columns: {self.input_enum_columns},\n'
+            f'output_enum_columns: {self.output_enum_columns},\n'
+            f'output_enum_columns: {self.output_enum_columns}}}'
         )
 
 
@@ -88,17 +76,42 @@ class DataFrameModelMixin:
     """
 
     def set_model_method_schema(self, model_method_schema: ModelMethodSchema):
+
+        # _validate_model_method_schema(model_method_schema)
+
         if not hasattr(self, 'model_method_schema_dict'):
             self.model_method_schema_dict = {}
+
         if model_method_schema.method_name in self.model_method_schema_dict:
             raise ValueError(f'{model_method_schema.method_name} has already been set.')
+
         self_methods = [method_name for method_name in dir(self)
                           if callable(getattr(self, method_name))]
         if model_method_schema.method_name not in self_methods:
             raise ValueError(
                 f'{model_method_schema.method_name} is not a method in {self}.'
             )
+
         self.model_method_schema_dict[model_method_schema.method_name] = model_method_schema
+
+    def set_model_method_column_info(self, model_method_column_info: ModelMethodColumnInfo):
+
+        # _validate_model_method_column_info(model_method_column_info)
+
+        if not hasattr(self, 'model_method_column_info_dict'):
+            self.model_method_column_info = {}
+
+        if model_method_column_info.method_name in self.model_method_column_info_dict:
+            raise ValueError(f'{model_method_column_info.method_name} has already been set.')
+        self_methods = [method_name for method_name in dir(self)
+                          if callable(getattr(self, method_name))]
+
+        if model_method_column_info.method_name not in self_methods:
+            raise ValueError(
+                f'{model_method_column_info.method_name} is not a method in {self}.'
+            )
+
+        self.model_method_column_info[model_method_column_info.method_name] = model_method_column_info
 
     # def get_open_api_yaml(self):
     #     """Get the open API spec for the the model predictions in a YAML representation.
@@ -126,6 +139,15 @@ class DataFrameModelMixin:
     #         target_df_schema=self.target_df_schema
     #     )
 
+
+def _validate_model_method_column_info(model_method_column_info):
+    if isinstance(model_method_column_info, ModelMethodColumnInfo) is False:
+        raise TypeError(f'model_method_column_info must be an instance of ModelMethodColumnInfo')
+
+
+def _validate_model_method_schema(model_method_schema):
+    if isinstance(model_method_schema, ModelMethodSchema) is False:
+        raise TypeError(f'model_method_schema must be an instance of ModelMethodSchema')
 
 ########################################################################################################
 # Decorators to help create models from DataFrameModel class.
@@ -165,13 +187,19 @@ def infer_feature_df_schema_from_fit(
                     "X must be a pandas DataFrame."
                 )
 
+            if isinstance(self_var, DataFrameModelMixin) is False:
+                raise ValueError(
+                    "Class must inherit from DataFrameModelMixin."
+                )
+
+            self_var.set_model_method_schema()
             if not hasattr(self_var, 'model_method_schema_dict'):
                 self_var.model_method_schema_dict = {}
 
             if func.__name__ not in self_var.model_method_schema_dict:
                 self_var.model_method_schema_dict['predict'] = {}
 
-            self_var.model_method_schema_dict['predict']['input_schema'] = _get_data_frame_schema_from_df(X)
+            self_var.model_method_schema_dict['predict']['input_schema'] = get_data_frame_schema_from_df(X)
 
             # if infer_enums:
             #     if not hasattr(self_var, 'feature_enum_columns'):
@@ -228,7 +256,7 @@ def infer_target_df_schema_from_fit(infer_enums: bool):
             if func.__name__ not in self_var.model_method_schema_dict:
                 self_var.model_method_schema_dict['predict'] = {}
 
-            self_var.model_method_schema_dict['predict']['output_schema'] = _get_data_frame_schema_from_df(y)
+            self_var.model_method_schema_dict['predict']['output_schema'] = get_data_frame_schema_from_df(y)
 
             # if infer_enums:
             #     if not hasattr(self_var, 'target_enum_columns'):

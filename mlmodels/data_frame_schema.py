@@ -141,17 +141,16 @@ class DataFrameSchema:
         return f'DataFrameSchema{{columns: {self.column_dict}}}'
 
 
-def _get_data_frame_schema_from_df(df: pd.DataFrame) -> DataFrameSchema:
-    dtype_dict = df.dtypes.astype(str).to_dict()
-    return DataFrameSchema([Column(k, dtype_dict[k]) for k in dtype_dict])
+def get_dtype_dict_from_df(df: pd.DataFrame) -> Dict:
+    return df.dtypes.astype(str).to_dict()
 
 
-def _get_enums_from_data_frame(df: pd.DataFrame, enum_columns: List[str]) -> Dict:
+def _get_enum_dict_from_df(df: pd.DataFrame, enum_columns: List[str]) -> Dict:
     enum_dict = {col: list(df[col].unique()) for col in enum_columns}
     return enum_dict
 
 
-def _get_intervals_from_data_frame(
+def _get_interval_dict_from_df(
         df: pd.DataFrame,
         interval_columns: List[str],
         interval_buffer_percent: float,
@@ -163,6 +162,34 @@ def _get_intervals_from_data_frame(
         buffer = (interval_buffer_percent / 100) * (max_ - min_)
         interval_dict[col] = Interval(min_ - buffer, max_ + buffer)
     return interval_dict
+
+
+def get_data_frame_schema_from_df(
+        df: pd.DataFrame,
+        enum_columns: List[str] = None,
+        interval_columns: List[str] = None,
+        interval_buffer_percent: float = None,
+) -> DataFrameSchema:
+
+    dtype_dict = get_dtype_dict_from_df(df)
+    if enum_columns:
+        enum_dict = _get_enum_dict_from_df(df, enum_columns)
+    else:
+        enum_dict = {}
+    if interval_columns:
+        interval_dict = _get_interval_dict_from_df(df, interval_columns, interval_buffer_percent)
+    else:
+        interval_dict = {}
+
+    data_frame_schema = DataFrameSchema([
+        Column(
+            name=k,
+            dtype=dtype_dict.get(k, None),
+            enum=enum_dict.get(k, None)
+        ) for k in dtype_dict
+    ])
+
+    return data_frame_schema
 
 
 def _validate_name(name):
