@@ -185,7 +185,8 @@ def get_data_frame_schema_from_df(
         Column(
             name=k,
             dtype=dtype_dict.get(k, None),
-            enum=enum_dict.get(k, None)
+            enum=enum_dict.get(k, None),
+            interval=interval_dict.get(k, None)
         ) for k in dtype_dict
     ])
 

@@ -3,8 +3,9 @@ from .base_classes import (
     BaseTransformer,
 )
 from .data_frame_model import (
-    DataFrameModelMixin,
-    FeatureSplitModel,
+    DataFrameModel,
+    DataFrameSchema,
+    ModelMethodColumnInfo,
     MLFlowWrapper,
     infer_target_df_schema_from_fit,
     infer_feature_df_schema_from_fit,
