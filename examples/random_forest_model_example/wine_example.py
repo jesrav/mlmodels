@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from mlmodels import MLFlowWrapper
+from mlmodels import MLFlowWrapper, ModelMethodColumnInfo, get_data_frame_schema_from_df
 from model_class import RandomForestClassifierModel
 import mlflow.pyfunc
 
@@ -43,14 +43,28 @@ if __name__ == '__main__':
     test_y = test[["quality"]]
 
     # Fit model, make predictions and evaluate
-    model = RandomForestClassifierModel(
+    model = TestModel(
         features=train_x.columns,
-        feature_enum_columns=['group1', 'group2'],
-        target_enum_columns=['quality'],
-        feature_interval_columns=['fixed acidity', 'volatile acidity', 'citric acid'],
         random_forest_params={'n_estimators': 100, 'max_depth': 15},
     )
+    model.set_model_method_column_info(
+        ModelMethodColumnInfo(
+            'predict',
+            input_enum_columns=['group1', 'group2'],
+            output_enum_columns=['quality'],
+            input_interval_columns=['chlorides', 'free sulfur dioxide'],
+            input_interval_percent_buffer=20,
+        )
+    )
+
     model.fit(train_x, train_y)
+
+    probability_predictions = model.predict_proba(test_x)
+
+    model.set_model_method_output_schema(
+        'predict_proba',
+        get_data_frame_schema_from_df(probability_predictions)
+    )
 
     predicted_qualities = model.predict(test_x)
 

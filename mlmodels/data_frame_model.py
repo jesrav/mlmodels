@@ -7,6 +7,10 @@ import pandas as pd
 from mlmodels.data_frame_schema import (
     DataFrameSchema,
     get_data_frame_schema_from_df)
+from mlmodels.openapi_spec import (
+    open_api_yaml_specification_from_df_method,
+    open_api_dict_specification_from_df_method
+)
 
 
 class ModelMethodSchema:
@@ -129,31 +133,31 @@ class DataFrameModel:
             self.model_method_schema_dict[method_name].set_output_schema(data_frame_schema)
 
 
-    # def get_open_api_yaml(self):
-    #     """Get the open API spec for the the model predictions in a YAML representation.
-    #
-    #     Returns
-    #     -------
-    #     str
-    #        YAML representation of the open API spec for the the model predictions
-    #     """
-    #     return open_api_yaml_specification(
-    #         feature_df_schema=self.feature_df_schema,
-    #         target_df_schema=self.target_df_schema
-    #     )
-    #
-    # def get_open_api_dict(self):
-    #     """Get the open API spec for the the model predictions in a dictionary representation.
-    #
-    #     Returns
-    #     -------
-    #     dict
-    #        Dictionary representation of the open API spec for the the model predictions
-    #     """
-    #     return open_api_dict_specification(
-    #         feature_df_schema=self.feature_df_schema,
-    #         target_df_schema=self.target_df_schema
-    #     )
+    def get_method_open_api_yaml(self, method_name):
+        """Get the open API spec for the the model predictions in a YAML representation.
+
+        Returns
+        -------
+        str
+           YAML representation of the open API spec for the the model predictions
+        """
+        return open_api_yaml_specification_from_df_method(
+            self.model_method_schema_dict[method_name].input_schema,
+            self.model_method_schema_dict[method_name].output_schema,
+        )
+
+    def get_method_open_api_dict(self, method_name):
+        """Get the open API spec for the the model predictions in a dictionary representation.
+
+        Returns
+        -------
+        dict
+           Dictionary representation of the open API spec for the the model predictions
+        """
+        return open_api_dict_specification_from_df_method(
+            self.model_method_schema_dict[method_name].input_schema,
+            self.model_method_schema_dict[method_name].output_schema,
+        )
 
 
 def _validate_model_method_column_info(model_method_column_info):

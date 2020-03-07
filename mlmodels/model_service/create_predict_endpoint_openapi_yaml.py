@@ -11,7 +11,7 @@ def load_model():
 
 
 def write_swagger_yaml_to_file(model, path_out):
-    swagger_dict = model.python_model.model.get_open_api_dict()
+    swagger_dict = model.python_model.model.get_method_open_api_dict()
     with open(str(path_out), 'w') as outfile:
         yaml.dump(swagger_dict, outfile, default_flow_style=False)
 

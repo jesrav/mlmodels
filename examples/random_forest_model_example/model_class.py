@@ -89,7 +89,7 @@ class TestModel(BaseModel, DataFrameModel):
         self.random_forest_params = random_forest_params
         self.model = RandomForestClassifier(**random_forest_params)
 
-    @infer_feature_df_schema_from_fit(['predict'])
+    @infer_feature_df_schema_from_fit(['predict', 'predict_proba'])
     @infer_target_df_schema_from_fit
     def fit(self, X, y):
         self.model.fit(X[self.features], y)
@@ -101,3 +101,9 @@ class TestModel(BaseModel, DataFrameModel):
         predictions_array = self.model.predict(X[self.features])
         predictions_df = pd.DataFrame(data=predictions_array, columns=self.target_columns)
         return predictions_df
+
+    def predict_proba(self, X):
+        probability_array = self.model.predict_proba(X[self.features])
+        probability_column_names = [f'probability of quality = {class_}' for class_ in self.model.classes_]
+        probability_df = pd.DataFrame(data=probability_array, columns=probability_column_names)
+        return probability_df

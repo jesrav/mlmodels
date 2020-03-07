@@ -61,14 +61,14 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from mlmodels import (
     BaseModel,
-    DataFrameModelMixin,
+    DataFrameModel,
     infer_target_df_schema_from_fit,
     infer_feature_df_schema_from_fit,
     validate_prediction_input_and_output
 )
 
 # Create data frame model class where the feature and target schema are infered when the model is fitted.
-class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
+class RandomForestClassifierModel(BaseModel, DataFrameModel):
     MODEL_NAME = 'Random forest classifier model'
 
     def __init__(
