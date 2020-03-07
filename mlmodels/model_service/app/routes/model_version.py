@@ -9,7 +9,7 @@ ml_model = MLModel()
 
 
 @model_version_endpoint_bp.route("/model_version", methods=["GET"])
-@flasgger.utils.swag_from('swagger/model_version.yaml')
+@flasgger.utils.swag_from('openapi/model_version.yaml')
 def model_version():
     response = {'model_version': ml_model.get_model_version()}
     response_json = flask.jsonify(response)

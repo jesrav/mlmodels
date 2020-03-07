@@ -9,7 +9,7 @@ ml_model = MLModel()
 
 
 @model_train_datetime_endpoint_bp.route("/model_train_datetime", methods=["GET"])
-@flasgger.utils.swag_from('swagger/model_train_datetime.yaml')
+@flasgger.utils.swag_from('openapi/model_train_datetime.yaml')
 def model_train_datetime():
     response = {'model_train_datetime': str(ml_model.get_model_train_datetime())}
     response_json = flask.jsonify(response)

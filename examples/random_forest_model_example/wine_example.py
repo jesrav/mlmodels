@@ -5,7 +5,7 @@ from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from mlmodels import MLFlowWrapper, ModelMethodColumnInfo, get_data_frame_schema_from_df
-from model_class import RandomForestClassifierModel
+from model_class import TestModel
 import mlflow.pyfunc
 
 

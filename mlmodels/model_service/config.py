@@ -6,7 +6,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 class Config(object):
     DEBUG = False
     SWAGGER = {
-    'title': 'ML model endpoint',
+    'title': 'ML model api',
     'swagger': '2.0',
     }
 

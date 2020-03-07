@@ -25,7 +25,7 @@ RUN pip install mlflow
 COPY app /opt/mlflow/app
 COPY api.py /opt/mlflow/api.py
 COPY install_mlfow_dependencies.py /opt/mlflow/install_mlfow_dependencies.py
-COPY create_predict_endpoint_openapi_yaml.py /opt/mlflow/create_predict_endpoint_openapi_yaml.py
+COPY create_model_method_endpoint_code_and_openapi_yaml.py /opt/mlflow/create_predict_endpoint_openapi_yaml.py
 COPY config.py /opt/mlflow/config.py
 COPY requirements.txt /opt/mlflow/requirements.txt
 
@@ -46,7 +46,7 @@ RUN conda install pip
 # Install model serving dependencies
 RUN /miniconda/envs/custom_env/bin/pip install -r requirements.txt
 
-# Create yaml file for prediction endpoint swagger specification
+# Create yaml file for prediction endpoint openapi specification
 RUN python create_predict_endpoint_openapi_yaml.py
 
 ENV FLASK_APP=api.py
