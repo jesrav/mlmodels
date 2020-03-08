@@ -12,7 +12,7 @@ responses:
       $ref: '#/definitions/{{ method_name }}_output'
 
 tags:
-  - predict
+  - Model_method_endpoints
 definitions:
   {{ method_name }}_input:
     properties:

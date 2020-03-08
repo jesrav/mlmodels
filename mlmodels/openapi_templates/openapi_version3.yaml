@@ -50,4 +50,4 @@ responses:
 {% endfor %}
           type: array
 tags:
-- predict
+- Model_method_endpoints

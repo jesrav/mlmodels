@@ -85,7 +85,7 @@ if __name__ == '__main__':
             DataFrameSchema(columns)
         )
 
-        set_predict_proba_method_output_schema_from_fitted_model(model)
+    set_predict_proba_method_output_schema_from_fitted_model(model)
 
     predicted_qualities = model.predict(test_x)
 
