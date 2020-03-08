@@ -129,6 +129,7 @@ class DataFrameModel:
 
         if method_name not in self.model_method_schema_dict:
             model_method_schema = ModelMethodSchema(method_name, output_schema=data_frame_schema)
+            self.model_method_schema_dict[method_name] = model_method_schema
         else:
             self.model_method_schema_dict[method_name].set_output_schema(data_frame_schema)
 
@@ -142,6 +143,7 @@ class DataFrameModel:
            YAML representation of the open API spec for the the model predictions
         """
         return open_api_yaml_specification_from_df_method(
+            method_name,
             self.model_method_schema_dict[method_name].input_schema,
             self.model_method_schema_dict[method_name].output_schema,
         )
@@ -155,6 +157,7 @@ class DataFrameModel:
            Dictionary representation of the open API spec for the the model predictions
         """
         return open_api_dict_specification_from_df_method(
+            method_name,
             self.model_method_schema_dict[method_name].input_schema,
             self.model_method_schema_dict[method_name].output_schema,
         )
@@ -245,7 +248,7 @@ def infer_target_df_schema_from_fit(func):
     return wrapper
 
 
-def validate_prediction_input_and_output(func):
+def validate_method_input_and_output(func):
 
     @wraps(func)
     def wrapper(*args):
@@ -257,7 +260,7 @@ def validate_prediction_input_and_output(func):
                 "First argument of function must be a pandas DataFrame."
             )
 
-        df = self_var.model_method_schema_dict[func.__name__].input_schema.validate_df(df)
+        _ = self_var.model_method_schema_dict[func.__name__].input_schema.validate_df(df)
 
         return_values = func(*args)
 
@@ -268,49 +271,25 @@ def validate_prediction_input_and_output(func):
     return wrapper
 
 
-########################################################################################################
-# Data frame model that uses separate model for each category of a feature.
-########################################################################################################
-# class FeatureSplitModel(BaseModel, DataFrameModelMixin):
-#     MODEL_NAME = 'Feature split meta model'
-#
-#     def __init__(
-#             self,
-#             features,
-#             group_column,
-#             group_model_dict,
-#     ):
-#         super().__init__()
-#         self.features = features
-#         self.group_column = group_column
-#         self.group_model_dict = group_model_dict
-#         self.target_columns = None
-#
-#     @infer_target_df_schema_from_fit(infer_enums=False)
-#     @infer_feature_df_schema_from_fit(infer_enums=False, infer_intervals=False)
-#     def fit(self, X, y):
-#         assert X.shape[0] == y.shape[0], "X and y must have same number of rows"
-#         assert self.group_column in X.columns, f"{self.group_column} must be a columns in X"
-#
-#         for group in X[self.group_column].unique():
-#             mask = (X[self.group_column] == group)
-#             self.group_model_dict[group].fit(X[mask], y[mask])
-#
-#         self.target_columns = y.columns
-#
-#     # @validate_prediction_input_and_output
-#     def predict(self, X):
-#         assert isinstance(X, pd.DataFrame), "X must be a Pandas data frame"
-#         assert self.group_column in X.columns, f"{self.group_column} must be a columns in X"
-#         X = X.copy()
-#
-#         X.append(pd.Series(name='prediction'))
-#         for group in X[self.group_column].unique():
-#             mask = (X[self.group_column] == group)
-#             X.loc[mask, 'prediction'] = self.group_model_dict[group].predict(X[mask])
-#             prediction_df = pd.DataFrame(data=X['prediction'], columns=self.target_columns)
-#         return prediction_df
+def validate_method_input(func):
 
+    @wraps(func)
+    def wrapper(*args):
+        self_var = args[0]
+        df = args[1]
+
+        if isinstance(df, pd.DataFrame) is False:
+            raise ValueError(
+                "First argument of function must be a pandas DataFrame."
+            )
+
+        _ = self_var.model_method_schema_dict[func.__name__].input_schema.validate_df(df)
+
+        return_values = func(*args)
+
+        return_values = self_var.model_method_schema_dict[func.__name__].output_schema.validate_df(return_values)
+
+        return return_values
 
 # ########################################################################################################
 # # Wrapper for mlflow

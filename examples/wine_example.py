@@ -4,8 +4,12 @@ import os
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from mlmodels import MLFlowWrapper, ModelMethodColumnInfo, get_data_frame_schema_from_df
-from model_class import TestModel
+from mlmodels import (
+    MLFlowWrapper,
+    ModelMethodColumnInfo,
+    Interval,
+    Column, DataFrameSchema)
+from model_class import RandomForestClassifierModel
 import mlflow.pyfunc
 
 
@@ -43,28 +47,45 @@ if __name__ == '__main__':
     test_y = test[["quality"]]
 
     # Fit model, make predictions and evaluate
-    model = TestModel(
+    model = RandomForestClassifierModel(
         features=train_x.columns,
         random_forest_params={'n_estimators': 100, 'max_depth': 15},
     )
-    model.set_model_method_column_info(
-        ModelMethodColumnInfo(
-            'predict',
-            input_enum_columns=['group1', 'group2'],
-            output_enum_columns=['quality'],
-            input_interval_columns=['chlorides', 'free sulfur dioxide'],
-            input_interval_percent_buffer=20,
+
+    # Set info about what column info to infer on fit
+    for method_name in ['predict', 'predict_proba']:
+        model.set_model_method_column_info(
+            ModelMethodColumnInfo(
+                method_name,
+                input_enum_columns=['group1', 'group2'],
+                output_enum_columns=['quality'],
+                input_interval_columns=['chlorides', 'free sulfur dioxide'],
+                input_interval_percent_buffer=25,
+            )
         )
-    )
 
     model.fit(train_x, train_y)
 
-    probability_predictions = model.predict_proba(test_x)
+    def set_predict_proba_method_output_schema_from_fitted_model(model):
 
-    model.set_model_method_output_schema(
-        'predict_proba',
-        get_data_frame_schema_from_df(probability_predictions)
-    )
+        probability_column_names = [
+            f'probability of quality = {class_}' for class_ in model.model.classes_
+        ]
+
+        columns = [
+            Column(
+                name,
+                dtype='float64',
+                interval=Interval(0, 1)
+            ) for name in probability_column_names
+        ]
+
+        model.set_model_method_output_schema(
+            'predict_proba',
+            DataFrameSchema(columns)
+        )
+
+        set_predict_proba_method_output_schema_from_fitted_model(model)
 
     predicted_qualities = model.predict(test_x)
 

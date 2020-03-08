@@ -3,18 +3,18 @@ parameters:
   name: "body"
   required: true
   schema:
-    $ref: '#/definitions/prediction_input'
+    $ref: '#/definitions/{{ method_name }}_input'
 
 responses:
   200:
     description: List of predictions
     schema:
-      $ref: '#/definitions/predictions'
+      $ref: '#/definitions/{{ method_name }}_output'
 
 tags:
   - predict
 definitions:
-  prediction_input:
+  {{ method_name }}_input:
     properties:
       data:
         items:
@@ -42,7 +42,7 @@ definitions:
       - data
     type: object
 
-  predictions:
+  {{ method_name }}_output:
     items:
       properties:
 {% for column in output_openapi_named_tuple %}

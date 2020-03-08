@@ -47,7 +47,7 @@ RUN conda install pip
 RUN /miniconda/envs/custom_env/bin/pip install -r requirements.txt
 
 # Create yaml file for prediction endpoint openapi specification
-RUN python create_predict_endpoint_openapi_yaml.py
+RUN python create_model_method_endpoint_code_and_openapi_yaml.py
 
 ENV FLASK_APP=api.py
 

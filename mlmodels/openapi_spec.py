@@ -26,7 +26,7 @@ OpenAPICol = namedtuple("OpenAPICol", ["name", "format", "type", 'enum', 'min_',
 
 def _data_frame_schema_to_open_api_cols(data_frame_schema: DataFrameSchema) -> List[OpenAPICol]:
     open_api_cols = []
-    for _, col in data_frame_schema.column_dict.items():
+    for _, col in data_frame_schema._column_dict.items():
         if hasattr(col.interval, 'start_value'):
             min_ = col.interval.start_value
         else:
@@ -49,6 +49,7 @@ def _data_frame_schema_to_open_api_cols(data_frame_schema: DataFrameSchema) -> L
 
 
 def open_api_yaml_specification_from_df_method(
+    method_name: str,
     input_df_schema: DataFrameSchema,
     output_df_schema: DataFrameSchema,
 ) -> str:
@@ -56,6 +57,7 @@ def open_api_yaml_specification_from_df_method(
 
     Parameters
     ----------
+    method_name : str
     input_df_schema: DataFrameSchema
     output_df_schema: DataFrameSchema
 
@@ -67,12 +69,14 @@ def open_api_yaml_specification_from_df_method(
     with open(openapi_template_path) as f:
         t = Template(f.read())
     return t.render(
+        method_name=method_name,
         input_openapi_named_tuple=_data_frame_schema_to_open_api_cols(input_df_schema),
         output_openapi_named_tuple=_data_frame_schema_to_open_api_cols(output_df_schema),
     )
 
 
 def open_api_dict_specification_from_df_method(
+        method_name: str,
         input_df_schema: DataFrameSchema,
         output_df_schema: DataFrameSchema,
 ) -> str:
@@ -90,6 +94,7 @@ def open_api_dict_specification_from_df_method(
     """
 
     return yaml.safe_load(open_api_yaml_specification_from_df_method(
+        method_name,
         input_df_schema,
         output_df_schema
     ))

@@ -64,7 +64,7 @@ from mlmodels import (
     DataFrameModel,
     infer_target_df_schema_from_fit,
     infer_feature_df_schema_from_fit,
-    validate_prediction_input_and_output
+    validate_method_input_and_output
 )
 
 # Create data frame model class where the feature and target schema are infered when the model is fitted.
@@ -95,7 +95,7 @@ class RandomForestClassifierModel(BaseModel, DataFrameModel):
         self.target_columns = y.columns
         return self
 
-    @validate_prediction_input_and_output
+    @validate_method_input_and_output
     def predict(self, X):
         predictions_array = self.model.predict(X[self.features])
         predictions_df = pd.DataFrame(data=predictions_array, columns=self.target_columns)
