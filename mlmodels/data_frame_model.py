@@ -11,7 +11,7 @@ from mlmodels.openapi_spec import (
     open_api_yaml_specification_from_df_method,
     open_api_dict_specification_from_df_method
 )
-
+from mlmodels import BaseModel
 
 class ModelMethodSchema:
 
@@ -73,17 +73,19 @@ class ModelMethodColumnInfo:
 ########################################################################################################
 # Data frame model mixin class
 ########################################################################################################
-class DataFrameModel:
+class DataFrameModelMixin:
     """Data frame model class
-    """
 
-    def __init__(self):
-        self.model_method_column_info_dict = {}
-        self.model_method_schema_dict = {}
+    The data frame model mixin class can be used to add functionality to a model class that has methods that
+    take a Pandas DataFrame as input and produces output in the form of a Pandas DataFrame.
+    """
 
     def set_model_method_column_info(self, model_method_column_info: ModelMethodColumnInfo):
 
         # _validate_model_method_column_info(model_method_column_info)
+
+        if not hasattr(self, 'model_method_column_info_dict'):
+            self.model_method_column_info_dict = {}
 
         if model_method_column_info.method_name in self.model_method_column_info_dict:
             raise ValueError(f'{model_method_column_info.method_name} has already been set.')
@@ -101,11 +103,17 @@ class DataFrameModel:
 
         # _validate_model_method_schema(model_method_schema)
 
+        if not hasattr(self, 'model_method_schema_dict'):
+            self.model_method_schema_dict = {}
+
         if model_method_schema.method_name in self.model_method_schema_dict:
             raise ValueError(f'{model_method_schema.method_name} has already been set.')
 
-        self_methods = [method_name for method_name in dir(self)
-                          if callable(getattr(self, method_name))]
+        self_methods = [
+            method_name for method_name in dir(self)
+            if callable(getattr(self, method_name))
+        ]
+
         if model_method_schema.method_name not in self_methods:
             raise ValueError(
                 f'{model_method_schema.method_name} is not a method in {self}.'
@@ -132,7 +140,6 @@ class DataFrameModel:
             self.model_method_schema_dict[method_name] = model_method_schema
         else:
             self.model_method_schema_dict[method_name].set_output_schema(data_frame_schema)
-
 
     def get_method_open_api_yaml(self, method_name):
         """Get the open API spec for the the model predictions in a YAML representation.
@@ -176,9 +183,7 @@ def _validate_model_method_schema(model_method_schema):
 ########################################################################################################
 # Decorators to help create models from DataFrameModel class.
 ########################################################################################################
-def infer_feature_df_schema_from_fit(method_list: Union[None, List[str]] = None):
-    if method_list is None:
-        method_list = ['predict']
+def infer_feature_df_schema_from_fit(method_list: Union[None, List[str]]):
 
     def decorator(func):
         @wraps(func)
@@ -192,13 +197,15 @@ def infer_feature_df_schema_from_fit(method_list: Union[None, List[str]] = None)
                     "X must be a pandas DataFrame."
                 )
 
-            if isinstance(self_var, DataFrameModel) is False:
+            if isinstance(self_var, DataFrameModelMixin) is False:
                 raise ValueError(
                     "Class must inherit from DataFrameModelMixin."
                 )
 
             for method_name in method_list:
-                if method_name not in self_var.model_method_column_info_dict:
+                if not hasattr(self_var, 'model_method_column_info_dict'):
+                    input_df_schema = get_data_frame_schema_from_df(X)
+                elif method_name not in self_var.model_method_column_info_dict:
                     input_df_schema = get_data_frame_schema_from_df(X)
                 else:
                     model_method_column_info = self_var.model_method_column_info_dict[method_name]
@@ -228,12 +235,14 @@ def infer_target_df_schema_from_fit(func):
                 "y must be a pandas DataFrame."
             )
 
-        if isinstance(self_var, DataFrameModel) is False:
+        if isinstance(self_var, DataFrameModelMixin) is False:
             raise ValueError(
                 "Class must inherit from DataFrameModelMixin."
             )
 
-        if 'predict' not in self_var.model_method_column_info_dict:
+        if not hasattr(self_var, 'model_method_column_info_dict'):
+            output_df_schema = get_data_frame_schema_from_df(y)
+        elif 'predict' not in self_var.model_method_column_info_dict:
             output_df_schema = get_data_frame_schema_from_df(y)
         else:
             model_method_column_info = self_var.model_method_column_info_dict['predict']
@@ -271,25 +280,60 @@ def validate_method_input_and_output(func):
     return wrapper
 
 
-def validate_method_input(func):
+def infer_from_fit(
+    feature_df_schema: bool,
+    target_df_schema: bool,
+    methods_with_features_as_input: Union[None, List[str]] = None,
+    validate_input_output_method_list: Union[None, List[str]] = None,
+):
+    if feature_df_schema and methods_with_features_as_input is None:
+        raise ValueError('If feature_df_schema is True then a list of methods must be passed.')
 
-    @wraps(func)
-    def wrapper(*args):
-        self_var = args[0]
-        df = args[1]
+    def decorator(cls):
+        @wraps(cls)
+        def wrapper(*args, **kws):
 
-        if isinstance(df, pd.DataFrame) is False:
-            raise ValueError(
-                "First argument of function must be a pandas DataFrame."
-            )
+            # Modify fit method.
+            cls.fit = infer_feature_df_schema_from_fit(methods_with_features_as_input)(cls.fit)
+            cls.fit = infer_target_df_schema_from_fit(cls.fit)
 
-        _ = self_var.model_method_schema_dict[func.__name__].input_schema.validate_df(df)
+            # Modify methods where input and output should be validated.
+            if validate_input_output_method_list is not None:
+                for method_name in validate_input_output_method_list:
+                    print(method_name)
+                    method = getattr(cls, method_name)
+                    method = validate_method_input_and_output(method)
 
-        return_values = func(*args)
+            return cls(*args, **kws)
 
-        return_values = self_var.model_method_schema_dict[func.__name__].output_schema.validate_df(return_values)
+        return wrapper
+    return decorator
 
-        return return_values
+# ########################################################################################################
+# # Wrapper for mlflow
+# ########################################################################################################
+class SKLearnWrapper(BaseModel, DataFrameModelMixin):
+
+    def __init__(
+            self,
+            features,
+            sklearn_model_class,
+            sklearn_model_params,
+    ):
+        super().__init__()
+        self.features = features
+        self.target_columns = None
+        self.model = sklearn_model_class(**sklearn_model_params)
+
+    def fit(self, X, y):
+        self.model.fit(X[self.features], y)
+        self.target_columns = y.columns
+        return self
+
+    def predict(self, X):
+        predictions_array = self.model.predict(X[self.features])
+        predictions_df = pd.DataFrame(data=predictions_array, columns=self.target_columns)
+        return predictions_df
 
 # ########################################################################################################
 # # Wrapper for mlflow
@@ -301,3 +345,4 @@ class MLFlowWrapper(mlflow.pyfunc.PythonModel):
 
     def predict(self, context, model_input):
         return self.model.predict(model_input)
+

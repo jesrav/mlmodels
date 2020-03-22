@@ -39,6 +39,7 @@ if __name__ == '__main__':
         features=train_x.columns,
         random_forest_params={'n_estimators': 100, 'max_depth': 15},
     )
+
     model.fit(train_x, train_y)
 
     predicted_qualities = model.predict(test_x)

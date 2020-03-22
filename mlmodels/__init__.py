@@ -3,10 +3,12 @@ from .base_classes import (
     BaseTransformer,
 )
 from .data_frame_model import (
-    DataFrameModel,
+    DataFrameModelMixin,
     DataFrameSchema,
     ModelMethodColumnInfo,
     MLFlowWrapper,
+    SKLearnWrapper,
+    infer_from_fit,
     infer_target_df_schema_from_fit,
     infer_feature_df_schema_from_fit,
     validate_method_input_and_output,

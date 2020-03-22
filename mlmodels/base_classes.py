@@ -13,12 +13,6 @@ class BaseModel(metaclass=ABCMeta):
     def __init__(self):
         self.model_initiated_dt = datetime.utcnow()
 
-    @property
-    @classmethod
-    @abstractmethod
-    def MODEL_NAME(self):
-        pass
-
     @abstractmethod
     def fit(self, X, y):
         pass
@@ -71,12 +65,6 @@ class BaseTransformer(metaclass=ABCMeta):
     """
     def __init__(self):
         self.transformer_initiated_dt = datetime.utcnow()
-
-    @property
-    @classmethod
-    @abstractmethod
-    def TRANSFORMER_NAME(self):
-        pass
 
     @abstractmethod
     def fit(self, X):

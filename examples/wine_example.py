@@ -8,7 +8,9 @@ from mlmodels import (
     MLFlowWrapper,
     ModelMethodColumnInfo,
     Interval,
-    Column, DataFrameSchema)
+    Column,
+    DataFrameSchema
+)
 from model_class import RandomForestClassifierModel
 import mlflow.pyfunc
 
@@ -67,6 +69,7 @@ if __name__ == '__main__':
     model.fit(train_x, train_y)
 
     def set_predict_proba_method_output_schema_from_fitted_model(model):
+        """Set the output data frame schema for the predict_proba method."""
 
         probability_column_names = [
             f'probability of quality = {class_}' for class_ in model.model.classes_
