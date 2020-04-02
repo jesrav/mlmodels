@@ -180,11 +180,11 @@ The model must wrapped as an mlflow.pyfunc model and must inherit from the BaseM
 
 To try it out, first we train and save a model locally. You need to use python 3.6.7 or update the python version in examples/random_forest_model_example/conda.yaml.
 ```console
-python examples/random_forest_model_example/wine_example.py
+python examples/wine_example.py
 ```
 Next build a docker image for serving the model using the cli. 
 ```console
-mlmodels dockerize examples/random_forest_model_example/model_output/wine_model 1 model-service:latest
+mlmodels dockerize examples/model_output/wine_model 1 model-service:latest
 ```
 To run the model service locally
 ```console
