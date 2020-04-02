@@ -1,5 +1,4 @@
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
 import pandas as pd
 
 from mlmodels import (
