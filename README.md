@@ -2,7 +2,7 @@
 
 ## Installation
 ```bash
-pip install git+https://github.com/jesrav/mlmodels#egg=mlmodels
+pip install git+https://github.com/jesrav/mlmodels
 ```
 To install dependencies for examles
 ```bash
@@ -55,51 +55,52 @@ Alternatively one can set the feature and target schema before or after fitting 
 
 ### Example use
 ```python
-from sklearn.ensemble import RandomForestClassifier
 import pandas as pd
 import numpy as np
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
+
 from mlmodels import (
     BaseModel,
     DataFrameModelMixin,
-    infer_target_df_schema_from_fit,
-    infer_feature_df_schema_from_fit,
-    validate_method_input_and_output
+    infer_from_fit,
+    ModelMethodColumnInfo,
 )
 
-# Create data frame model class where the feature and target schema are infered when the model is fitted.
+
+# Create data frame model class where the feature and target schema are inferred when the model is fitted.
+@infer_from_fit(
+    feature_df_schema=True,
+    target_df_schema=True,
+    methods_with_features_as_input=['predict'],
+    validate_input_output_method_list=['predict']
+)
 class RandomForestClassifierModel(BaseModel, DataFrameModelMixin):
-    MODEL_NAME = 'Random forest classifier model'
 
     def __init__(
             self,
             features,
-            feature_enum_columns=None,
-            target_enum_columns=None,
-            feature_interval_columns=None,
             random_forest_params={'n_estimators': 100, 'max_depth': 30},
     ):
         super().__init__()
         self.features = features
         self.target_columns = None,
-        self.feature_enum_columns = feature_enum_columns    # Needs to be set to infer enums for ceartain features.
-        self.target_enum_columns = target_enum_columns      # Needs to be set to infer enums for certain of the target columns.
-        self.feature_interval_columns = feature_interval_columns    # Needs to be set to infer the range/interval of accepted values for certain continous features. 
         self.random_forest_params = random_forest_params
         self.model = RandomForestClassifier(**random_forest_params)
 
-    @infer_feature_df_schema_from_fit(infer_enums=True, infer_intervals=True, interval_buffer_percent=25)
-    @infer_target_df_schema_from_fit(infer_enums=True)
     def fit(self, X, y):
         self.model.fit(X[self.features], y)
         self.target_columns = y.columns
         return self
 
-    @validate_method_input_and_output
     def predict(self, X):
         predictions_array = self.model.predict(X[self.features])
-        predictions_df = pd.DataFrame(data=predictions_array, columns=self.target_columns)
+        predictions_df = pd.DataFrame(
+            data=predictions_array, 
+            columns=self.target_columns
+        )
         return predictions_df
+
 
 # Read data
 csv_url = 'http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv'
@@ -123,10 +124,18 @@ test_y = test[["quality"]]
 # Initialize a model
 model = RandomForestClassifierModel(
     features=train_x.columns,
-    feature_enum_columns=['group1', 'group2'],
-    target_enum_columns=['quality'],
-    feature_interval_columns=['fixed acidity', 'volatile acidity', 'citric acid'],
     random_forest_params={'n_estimators': 100, 'max_depth': 15},
+)
+
+# Set information about columns
+model.set_model_method_column_info(
+    ModelMethodColumnInfo(
+        'predict',
+        input_enum_columns=['group1', 'group2'],
+        output_enum_columns=['quality'],
+        input_interval_columns=['chlorides', 'free sulfur dioxide'],
+        input_interval_percent_buffer=25,
+    )
 )
 
 # Fit model, make predictions and evaluate
