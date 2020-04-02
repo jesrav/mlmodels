@@ -2,5 +2,5 @@
 /dist
 /build
 .env
-/examples/random_forest_model_example/model_output/*
-!/examples/random_forest_model_example/model_output/.gitkeep
+/examples/model_output/*
+!/examples/model_output/.gitkeep

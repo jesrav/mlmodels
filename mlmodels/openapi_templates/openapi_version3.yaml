@@ -7,18 +7,18 @@ requestBody:
           data:
             items:
               properties:
-{% for feat in feature_openapi_named_tuple %}
-                {{ feat.name }}:
-                  format: {{ feat.format }}
-                  type: {{ feat.type }}
-  {% if feat.enum is not none %}
-                  enum: {{ feat.enum }}
+{% for column in input_openapi_named_tuple %}
+                {{ column.name }}:
+                  format: {{ column.format }}
+                  type: {{ column.type }}
+  {% if column.enum is not none %}
+                  enum: {{ column.enum }}
   {% endif %}
-  {% if feat.min_ is not none %}
-                  minimum: {{ feat.min_ }}
+  {% if column.min_ is not none %}
+                  minimum: {{ column.min_ }}
   {% endif %}
-  {% if feat.max_ is not none %}
-                  maximum: {{ feat.max_ }}
+  {% if column.max_ is not none %}
+                  maximum: {{ column.max_ }}
     {% endif %}
 {% endfor %}
             type: array
@@ -34,20 +34,20 @@ responses:
         schema:
           items:
             properties:
-{% for target in target_openapi_named_tuple %}
-              {{ target.name }}:
-                format: {{ target.format }}
-                type: {{ target.type }}
-  {% if target.enum is not none %}
-                enum: {{ target.enum }}
+{% for column in output_openapi_named_tuple %}
+              {{ column.name }}:
+                format: {{ column.format }}
+                type: {{ column.type }}
+  {% if column.enum is not none %}
+                enum: {{ column.enum }}
   {% endif %}
-  {% if target.min_ is not none %}
-                minimum: {{ target.min_ }}
+  {% if column.min_ is not none %}
+                minimum: {{ column.min_ }}
   {% endif %}
-  {% if target.max_ is not none %}
-                maximum: {{ target.max_ }}
+  {% if column.max_ is not none %}
+                maximum: {{ column.max_ }}
   {% endif %}
 {% endfor %}
           type: array
 tags:
-- predict
+- Model_method_endpoints

@@ -77,8 +77,11 @@ class DataFrameSchema:
     def __init__(self, columns: List[Column]):
         if len(set([col.name for col in columns])) < len(columns):
             raise ValueError('Columns names must be unique.')
-        self.column_dict = {col.name: col for col in columns}
-        self._data_frame_schema = _pandera_data_frame_schema_from_column_dict(self.column_dict)
+        self._column_dict = {col.name: col for col in columns}
+        self._data_frame_schema = _pandera_data_frame_schema_from_column_dict(self._column_dict)
+
+    def get_columns(self) -> List[Column]:
+        return [self._column_dict[column_name] for column_name in self._column_dict]
 
     def modify_column(
             self,
@@ -87,6 +90,20 @@ class DataFrameSchema:
             enum: Union[List[str], None] = None,
             interval: Union[Interval, None] = None,
     ):
+        """
+
+        Parameters
+        ----------
+        column_name: str
+            Name of the column to modify
+        dtype: Union[List[str], None]
+            New dtype for the column will be changed to. If None, dtype id not modified.
+        enum: Union[List[str], None]
+            New enum for the column will be changed to. If None, enum id not modified.
+        interval: Union[Interval, None]
+            New interval for the column will be changed to. If None, interval id not modified.
+
+        """
         _validate_name(column_name)
         if dtype:
             _validate_dtype(dtype)
@@ -95,7 +112,7 @@ class DataFrameSchema:
         if interval:
             _validate_interval(interval)
 
-        initialized_col_names = [col for col in self.column_dict]
+        initialized_col_names = [col for col in self._column_dict]
         if column_name not in initialized_col_names:
             raise ValueError(
                 f'column name must be one of the initialized column names: {initialized_col_names}'
@@ -103,11 +120,20 @@ class DataFrameSchema:
 
         new_column = Column(
             column_name,
-            dtype or self.column_dict[column_name].dtype,
-            enum or self.column_dict[column_name].enum,
-            interval or self.column_dict[column_name].interval)
-        self.column_dict[column_name] = new_column
-        self._data_frame_schema = _pandera_data_frame_schema_from_column_dict(self.column_dict)
+            dtype or self._column_dict[column_name].dtype,
+            enum or self._column_dict[column_name].enum,
+            interval or self._column_dict[column_name].interval)
+        self._column_dict[column_name] = new_column
+        self._data_frame_schema = _pandera_data_frame_schema_from_column_dict(self._column_dict)
+
+    def get_dtypes(self) -> Dict:
+        """
+
+        Returns
+        -------
+        Dict: Dictionary where keys are the column names and values are the dtypes as strings.
+        """
+        return {col.name: col.dtype for _, col in self._column_dict.items()}
 
     def validate_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """Validate pandas data frame
@@ -128,30 +154,20 @@ class DataFrameSchema:
         """
         return self._data_frame_schema.validate(df)
 
-    def get_dtypes(self) -> Dict:
-        """
-
-        Returns
-        -------
-        Dict: Dictionary where keys are the column names and values are the dtypes as strings.
-        """
-        return {col.name: col.dtype for _, col in self.column_dict.items()}
-
     def __repr__(self):
-        return f'DataFrameSchema{{columns: {self.column_dict}}}'
+        return f'DataFrameSchema{{columns: {self._column_dict}}}'
 
 
-def _get_data_frame_schema_from_df(df: pd.DataFrame) -> DataFrameSchema:
-    dtype_dict = df.dtypes.astype(str).to_dict()
-    return DataFrameSchema([Column(k, dtype_dict[k]) for k in dtype_dict])
+def get_dtype_dict_from_df(df: pd.DataFrame) -> Dict:
+    return df.dtypes.astype(str).to_dict()
 
 
-def _get_enums_from_data_frame(df: pd.DataFrame, enum_columns: List[str]) -> Dict:
+def _get_enum_dict_from_df(df: pd.DataFrame, enum_columns: List[str]) -> Dict:
     enum_dict = {col: list(df[col].unique()) for col in enum_columns}
     return enum_dict
 
 
-def _get_intervals_from_data_frame(
+def _get_interval_dict_from_df(
         df: pd.DataFrame,
         interval_columns: List[str],
         interval_buffer_percent: float,
@@ -163,6 +179,35 @@ def _get_intervals_from_data_frame(
         buffer = (interval_buffer_percent / 100) * (max_ - min_)
         interval_dict[col] = Interval(min_ - buffer, max_ + buffer)
     return interval_dict
+
+
+def get_data_frame_schema_from_df(
+        df: pd.DataFrame,
+        enum_columns: List[str] = None,
+        interval_columns: List[str] = None,
+        interval_buffer_percent: float = None,
+) -> DataFrameSchema:
+
+    dtype_dict = get_dtype_dict_from_df(df)
+    if enum_columns:
+        enum_dict = _get_enum_dict_from_df(df, enum_columns)
+    else:
+        enum_dict = {}
+    if interval_columns:
+        interval_dict = _get_interval_dict_from_df(df, interval_columns, interval_buffer_percent)
+    else:
+        interval_dict = {}
+
+    data_frame_schema = DataFrameSchema([
+        Column(
+            name=k,
+            dtype=dtype_dict.get(k, None),
+            enum=enum_dict.get(k, None),
+            interval=interval_dict.get(k, None)
+        ) for k in dtype_dict
+    ])
+
+    return data_frame_schema
 
 
 def _validate_name(name):

@@ -5,9 +5,13 @@
       <w>dockerize</w>
       <w>dtype</w>
       <w>jinja</w>
+      <w>logreg</w>
+      <w>mlflow</w>
       <w>mlmodels</w>
       <w>openapi</w>
       <w>pandera</w>
+      <w>proba</w>
+      <w>rmse</w>
     </words>
   </dictionary>
 </component>

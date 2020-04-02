@@ -4,7 +4,13 @@ import os
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from mlmodels import MLFlowWrapper
+from mlmodels import (
+    MLFlowWrapper,
+    ModelMethodColumnInfo,
+    Interval,
+    Column,
+    DataFrameSchema
+)
 from model_class import RandomForestClassifierModel
 import mlflow.pyfunc
 
@@ -45,12 +51,44 @@ if __name__ == '__main__':
     # Fit model, make predictions and evaluate
     model = RandomForestClassifierModel(
         features=train_x.columns,
-        feature_enum_columns=['group1', 'group2'],
-        target_enum_columns=['quality'],
-        feature_interval_columns=['fixed acidity', 'volatile acidity', 'citric acid'],
         random_forest_params={'n_estimators': 100, 'max_depth': 15},
     )
+
+    # Set info about what column info to infer on fit
+    for method_name in ['predict', 'predict_proba']:
+        model.set_model_method_column_info(
+            ModelMethodColumnInfo(
+                method_name,
+                input_enum_columns=['group1', 'group2'],
+                output_enum_columns=['quality'],
+                input_interval_columns=['chlorides', 'free sulfur dioxide'],
+                input_interval_percent_buffer=25,
+            )
+        )
+
     model.fit(train_x, train_y)
+
+    def set_predict_proba_method_output_schema_from_fitted_model(model):
+        """Set the output data frame schema for the predict_proba method."""
+
+        probability_column_names = [
+            f'probability of quality = {class_}' for class_ in model.model.classes_
+        ]
+
+        columns = [
+            Column(
+                name,
+                dtype='float64',
+                interval=Interval(0, 1)
+            ) for name in probability_column_names
+        ]
+
+        model.set_model_method_output_schema(
+            'predict_proba',
+            DataFrameSchema(columns)
+        )
+
+    set_predict_proba_method_output_schema_from_fitted_model(model)
 
     predicted_qualities = model.predict(test_x)
 

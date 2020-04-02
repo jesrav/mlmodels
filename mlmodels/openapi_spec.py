@@ -26,7 +26,7 @@ OpenAPICol = namedtuple("OpenAPICol", ["name", "format", "type", 'enum', 'min_',
 
 def _data_frame_schema_to_open_api_cols(data_frame_schema: DataFrameSchema) -> List[OpenAPICol]:
     open_api_cols = []
-    for _, col in data_frame_schema.column_dict.items():
+    for _, col in data_frame_schema._column_dict.items():
         if hasattr(col.interval, 'start_value'):
             min_ = col.interval.start_value
         else:
@@ -48,16 +48,18 @@ def _data_frame_schema_to_open_api_cols(data_frame_schema: DataFrameSchema) -> L
     return open_api_cols
 
 
-def open_api_yaml_specification(
-    feature_df_schema: DataFrameSchema,
-    target_df_schema: DataFrameSchema,
+def open_api_yaml_specification_from_df_method(
+    method_name: str,
+    input_df_schema: DataFrameSchema,
+    output_df_schema: DataFrameSchema,
 ) -> str:
     """Get open API spec for model from template in a YAML representation.
 
     Parameters
     ----------
-    feature_df_schema: DataFrameSchema
-    target_df_schema: DataFrameSchema
+    method_name : str
+    input_df_schema: DataFrameSchema
+    output_df_schema: DataFrameSchema
 
     Returns
     -------
@@ -67,21 +69,23 @@ def open_api_yaml_specification(
     with open(openapi_template_path) as f:
         t = Template(f.read())
     return t.render(
-        feature_openapi_named_tuple=_data_frame_schema_to_open_api_cols(feature_df_schema),
-        target_openapi_named_tuple=_data_frame_schema_to_open_api_cols(target_df_schema),
+        method_name=method_name,
+        input_openapi_named_tuple=_data_frame_schema_to_open_api_cols(input_df_schema),
+        output_openapi_named_tuple=_data_frame_schema_to_open_api_cols(output_df_schema),
     )
 
 
-def open_api_dict_specification(
-        feature_df_schema: DataFrameSchema,
-        target_df_schema: DataFrameSchema,
+def open_api_dict_specification_from_df_method(
+        method_name: str,
+        input_df_schema: DataFrameSchema,
+        output_df_schema: DataFrameSchema,
 ) -> str:
     """Get open API spec for model from template in a YAML representation.
 
     Parameters
     ----------
-    feature_df_schema: DataFrameSchema
-    target_df_schema: DataFrameSchema
+    input_df_schema: DataFrameSchema
+    output_df_schema: DataFrameSchema
 
     Returns
     -------
@@ -89,7 +93,8 @@ def open_api_dict_specification(
         Dictionary representation of the open API spec for the the model predictions.
     """
 
-    return yaml.safe_load(open_api_yaml_specification(
-        feature_df_schema,
-        target_df_schema
+    return yaml.safe_load(open_api_yaml_specification_from_df_method(
+        method_name,
+        input_df_schema,
+        output_df_schema
     ))
