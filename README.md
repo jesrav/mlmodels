@@ -45,13 +45,10 @@ loaded_model.predict([[1, 1], [2, 2]])
 ```
 ## Data frame model mixin class
 If you create a model that takes a data frame and outputs a data frame when predicting, you can use the DataFrameModelMixin class to add some functionality.
-It adds the following methods: 
-- set_feature_df_schema: setting the schema of the schema of the model input 
-- set_target_df_schema: setting the schema of the prediction data frame.
-- get_open_api_yaml/get_open_api_dict: Generating an open api specification.
 
 The DataFrameModelMixin class can be used in combination with the accompanying decorators to infer the feature and target schema on fit and validate new data on predict.
 Alternatively one can set the feature and target schema before or after fitting the model.
+TODO: Add more details!
 
 ### Example use
 ```python
