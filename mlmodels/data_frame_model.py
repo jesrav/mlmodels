@@ -80,7 +80,10 @@ class DataFrameModelMixin:
     take a Pandas DataFrame as input and produces output in the form of a Pandas DataFrame.
     """
 
-    def set_model_method_column_info(self, model_method_column_info: ModelMethodColumnInfo):
+    def set_model_method_column_info(
+            self,
+            model_method_column_info: ModelMethodColumnInfo
+    ):
 
         # _validate_model_method_column_info(model_method_column_info)
 
@@ -300,9 +303,9 @@ def infer_from_fit(
             # Modify methods where input and output should be validated.
             if validate_input_output_method_list is not None:
                 for method_name in validate_input_output_method_list:
-                    print(method_name)
                     method = getattr(cls, method_name)
                     method = validate_method_input_and_output(method)
+                    setattr(cls, method_name, method)
 
             return cls(*args, **kws)
 
