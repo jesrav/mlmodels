@@ -13,8 +13,9 @@ from mlmodels.openapi_spec import (
 )
 from mlmodels import BaseModel
 
-class ModelMethodSchema:
-
+class ModelMethodSchemas:
+    """Class for representing the input and output (data frame) schemas of
+    a method."""
     def __init__(
             self,
             method_name: str,
@@ -26,11 +27,13 @@ class ModelMethodSchema:
         self.output_schema = output_schema
 
     def set_input_schema(self, input_schema: DataFrameSchema):
+        """Set the method input schema."""
         if not isinstance(input_schema, DataFrameSchema):
             raise TypeError('input_schema most be a DataFrameSchema instance.')
         self.input_schema = input_schema
 
     def set_output_schema(self, output_schema: DataFrameSchema):
+        """Set the method output schema."""
         if not isinstance(output_schema, DataFrameSchema):
             raise TypeError('output_schema most be a DataFrameSchema instance.')
         self.output_schema = output_schema
@@ -44,6 +47,7 @@ class ModelMethodSchema:
 
 
 class ModelMethodColumnInfo:
+    """Class for holding information about the columns for a method."""
     def __init__(
             self,
             method_name: str,
@@ -84,8 +88,12 @@ class DataFrameModelMixin:
             self,
             model_method_column_info: ModelMethodColumnInfo
     ):
+        """Set column information for a method.
 
-        # _validate_model_method_column_info(model_method_column_info)
+        Parameters
+        ----------
+        model_method_column_info: ModelMethodColumnInfo
+        """
 
         if not hasattr(self, 'model_method_column_info_dict'):
             self.model_method_column_info_dict = {}
@@ -102,9 +110,14 @@ class DataFrameModelMixin:
 
         self.model_method_column_info_dict[model_method_column_info.method_name] = model_method_column_info
 
-    def set_model_method_schema(self, model_method_schema: ModelMethodSchema):
+    def set_model_method_schema(self, model_method_schema: ModelMethodSchemas):
+        """Set input and output data frame schema for a method.
 
-        # _validate_model_method_schema(model_method_schema)
+        Parameters
+        ----------
+        model_method_schema: ModelMethodSchemas
+
+        """
 
         if not hasattr(self, 'model_method_schema_dict'):
             self.model_method_schema_dict = {}
@@ -124,22 +137,44 @@ class DataFrameModelMixin:
 
         self.model_method_schema_dict[model_method_schema.method_name] = model_method_schema
 
-    def set_model_method_input_schema(self, method_name: str, data_frame_schema: DataFrameSchema):
+    def set_model_method_input_schema(
+            self,
+            method_name: str,
+            data_frame_schema: DataFrameSchema
+    ):
+        """Set input data frame schema for a method.
+
+        Parameters
+        ----------
+        method_name: str
+        data_frame_schema: DataFrameSchema
+        """
         if not hasattr(self, 'model_method_schema_dict'):
             self.model_method_schema_dict = {}
 
         if method_name not in self.model_method_schema_dict:
-            model_method_schema = ModelMethodSchema(method_name, input_schema=data_frame_schema)
+            model_method_schema = ModelMethodSchemas(method_name, input_schema=data_frame_schema)
             self.model_method_schema_dict[method_name] = model_method_schema
         else:
             self.model_method_schema_dict[method_name].set_input_schema(data_frame_schema)
 
-    def set_model_method_output_schema(self, method_name: str, data_frame_schema: DataFrameSchema):
+    def set_model_method_output_schema(
+            self,
+            method_name: str,
+            data_frame_schema: DataFrameSchema
+    ):
+        """Set output data frame schema for a method.
+
+        Parameters
+        ----------
+        method_name: str
+        data_frame_schema: DataFrameSchema
+        """
         if not hasattr(self, 'model_method_schema_dict'):
             self.model_method_schema_dict = {}
 
         if method_name not in self.model_method_schema_dict:
-            model_method_schema = ModelMethodSchema(method_name, output_schema=data_frame_schema)
+            model_method_schema = ModelMethodSchemas(method_name, output_schema=data_frame_schema)
             self.model_method_schema_dict[method_name] = model_method_schema
         else:
             self.model_method_schema_dict[method_name].set_output_schema(data_frame_schema)
@@ -179,7 +214,7 @@ def _validate_model_method_column_info(model_method_column_info):
 
 
 def _validate_model_method_schema(model_method_schema):
-    if isinstance(model_method_schema, ModelMethodSchema) is False:
+    if isinstance(model_method_schema, ModelMethodSchemas) is False:
         raise TypeError(f'model_method_schema must be an instance of ModelMethodSchema')
 
 
@@ -313,10 +348,10 @@ def infer_from_fit(
     return decorator
 
 # ########################################################################################################
-# # Wrapper for mlflow
+# # Wrapper for sklearn models
 # ########################################################################################################
 class SKLearnWrapper(BaseModel, DataFrameModelMixin):
-
+    """Wrapper for making sklearn models return data frames."""
     def __init__(
             self,
             features,
@@ -342,7 +377,7 @@ class SKLearnWrapper(BaseModel, DataFrameModelMixin):
 # # Wrapper for mlflow
 # ########################################################################################################
 class MLFlowWrapper(mlflow.pyfunc.PythonModel):
-
+    """Wrapper for creating a MLFlow pyfunc model."""
     def __init__(self, model):
         self.model = model
 

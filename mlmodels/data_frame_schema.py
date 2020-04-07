@@ -18,8 +18,17 @@ _dtype_to_pandera_map = {
 
 
 class Interval:
-    """Class for holding intervals."""
+    """Class for holding intervals. The interval is open."""
     def __init__(self, start_value: float, end_value: float):
+        """
+
+        Parameters
+        ----------
+        start_value: float
+            Start or left part of the interval
+        end_value: float
+            End or right part of the interval
+        """
 
         if end_value <= start_value:
             raise ValueError('end_value must be larger than start_value.')
@@ -39,6 +48,18 @@ class Column:
             enum: Union[List, None] = None,
             interval: Union[Interval, None] = None
     ):
+        """
+        Parameters
+        ----------
+        name: str
+            Name of column
+        dtype: str
+            Dtype of column
+        enum: Union[List, None] = None
+            List of values that the column can take.
+        interval: Union[Interval, None] = None
+            Interval spanning the possible values the colunm can take.
+        """
         _validate_column_input(name, dtype, enum, interval)
 
         self.name = name
@@ -73,7 +94,7 @@ def _pandera_data_frame_schema_from_column_dict(column_dict: Dict) -> pa.DataFra
 
 
 class DataFrameSchema:
-
+    """Class to represent a data frame schema."""
     def __init__(self, columns: List[Column]):
         if len(set([col.name for col in columns])) < len(columns):
             raise ValueError('Columns names must be unique.')
@@ -81,6 +102,11 @@ class DataFrameSchema:
         self._data_frame_schema = _pandera_data_frame_schema_from_column_dict(self._column_dict)
 
     def get_columns(self) -> List[Column]:
+        """Get the columns in the data frame schema.
+        Returns
+        -------
+        List[Column]
+        """
         return [self._column_dict[column_name] for column_name in self._column_dict]
 
     def modify_column(
@@ -90,7 +116,7 @@ class DataFrameSchema:
             enum: Union[List[str], None] = None,
             interval: Union[Interval, None] = None,
     ):
-        """
+        """Modify a column in the data frame schema.
 
         Parameters
         ----------
@@ -127,7 +153,7 @@ class DataFrameSchema:
         self._data_frame_schema = _pandera_data_frame_schema_from_column_dict(self._column_dict)
 
     def get_dtypes(self) -> Dict:
-        """
+        """Get the dtypes of the data frame schema.
 
         Returns
         -------
@@ -136,7 +162,7 @@ class DataFrameSchema:
         return {col.name: col.dtype for _, col in self._column_dict.items()}
 
     def validate_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Validate pandas data frame
+        """Validate pandas data frame against the data frame schema.
 
         Parameters
         ----------
@@ -158,7 +184,7 @@ class DataFrameSchema:
         return f'DataFrameSchema{{columns: {self._column_dict}}}'
 
 
-def get_dtype_dict_from_df(df: pd.DataFrame) -> Dict:
+def _get_dtype_dict_from_df(df: pd.DataFrame) -> Dict:
     return df.dtypes.astype(str).to_dict()
 
 
@@ -187,8 +213,23 @@ def get_data_frame_schema_from_df(
         interval_columns: List[str] = None,
         interval_buffer_percent: float = None,
 ) -> DataFrameSchema:
+    """Get the data frame schema of a data frame.
 
-    dtype_dict = get_dtype_dict_from_df(df)
+    Parameters
+    ----------
+    df: pd.DataFrame
+    enum_columns: List[str] = None
+        List of enum columns
+    interval_columns: List[str] = None,
+        List of interval columns
+    interval_buffer_percent: float = None
+        Percentage buffer added to the inferred interval.
+    Returns
+    -------
+    DataFrameSchema
+    """
+
+    dtype_dict = _get_dtype_dict_from_df(df)
     if enum_columns:
         enum_dict = _get_enum_dict_from_df(df, enum_columns)
     else:
