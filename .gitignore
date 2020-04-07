@@ -4,3 +4,6 @@
 .env
 /examples/model_output/*
 !/examples/model_output/.gitkeep
+/_templates
+/_build
+/_static

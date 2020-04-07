@@ -18,7 +18,8 @@ setup(
         'jinja2',
         'PyYAML',
         'numpy',
-        'pandera==0.3.0'
+        'pandera==0.3.0',
+        'sphinx',
     ],
     package_data={'': [
         'model_service/Dockerfile',
