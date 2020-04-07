@@ -2,9 +2,11 @@
 
 ## Installation
 ```bash
-pip install git+https://github.com/jesrav/mlmodels
+git clone https://github.com/jesrav/mlmodels.git
+cd mlmodels
+pip install .
 ```
-To install dependencies for examles
+To install dependencies for examples
 ```bash
 pip install -r examples/requirements.txt
 ```
@@ -144,27 +146,27 @@ If the input dataframe does not match the data frame schema you will get an erro
 ```python
 # Example of missing features
 model.predict(test_x[["density", "chlorides", "alcohol"]])
-# returns: pandera.errors.SchemaError: column 'fixed acidity' not in dataframe
+# returns: SchemaError: column 'fixed acidity' not in dataframe
 
 # Example of wrong dtype
 test_x_copy = test_x.copy()
 test_x_copy.density = test_x_copy.density.astype('int64')
 model.predict(test_x_copy)
-# returns: pandera.errors.SchemaError: expected series 'density' to have type float64, got int64
+# returns: SchemaError: expected series 'density' to have type float64, got int64
 
 # Example of wrong categorical value/enum.
 test_x_copy = test_x.copy()
 test_x_copy.group1 = 100
 model.predict(test_x_copy)
-# returns: pandera.errors.SchemaError: <Schema Column: 'group1' type=int64> failed element-wise validator 0:
+# returns: SchemaError: <Schema Column: 'group1' type=int64> failed element-wise validator 0:
 # <Check _isin: isin(frozenset({0, 1, 2}))>
 
 # Example of value outside of accepted interval.
 test_x_copy = test_x.copy()
-test_x_copy.group1 = 100.0
+test_x_copy['chlorides'] = 100.0
 model.predict(test_x_copy)
-# returns: pandera.errors.SchemaError: <Schema Column: 'fixed acidity' type=float64> failed element-wise validator 0:
-# <Check _in_range: in_range(1.7749999999999995, 18.725)>
+# returns: chema Column: 'chlorides' type=float64> failed element-wise validator 0:
+# <Check _in_range: in_range(-0.13774999999999998, 0.76075)
 ```
 
 ## Creating MLFLOW pyfunc model
