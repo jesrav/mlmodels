@@ -53,13 +53,11 @@ if __name__ == '__main__':
 
     # decorate model to infer schemas from fit
     model = infer_from_fit(
-        feature_df_schema=True,
-        target_df_schema=True,
+        infer_feature_df_schema=True,
+        infer_target_df_schema=True,
         methods_with_features_as_input=['predict'],
         validate_input_output_method_list=['predict']
     )(model)
-
-    print(type(model))
 
     model.fit(train_x, train_y)
 

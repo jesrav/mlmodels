@@ -40,8 +40,8 @@ class RandomForestRegressorModel(BaseModel, DataFrameModelMixin):
 
 
 @infer_from_fit(
-    feature_df_schema=True,
-    target_df_schema=True,
+    infer_feature_df_schema=True,
+    infer_target_df_schema=True,
     methods_with_features_as_input=['predict', 'predict_proba'],
     validate_input_output_method_list=['predict', 'predict_proba']
 )

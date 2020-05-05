@@ -319,21 +319,21 @@ def validate_method_input_and_output(func):
 
 
 def infer_from_fit(
-    feature_df_schema: bool,
-    target_df_schema: bool,
+    infer_feature_df_schema: bool,
+    infer_target_df_schema: bool,
     methods_with_features_as_input: Union[None, List[str]] = None,
     validate_input_output_method_list: Union[None, List[str]] = None,
 ):
-    if feature_df_schema and methods_with_features_as_input is None:
-        raise ValueError('If feature_df_schema is True then a list of methods must be passed.')
 
     def decorator(cls):
         @wraps(cls)
         def wrapper(*args, **kws):
 
             # Modify fit method.
-            cls.fit = infer_feature_df_schema_from_fit(methods_with_features_as_input)(cls.fit)
-            cls.fit = infer_target_df_schema_from_fit(cls.fit)
+            if infer_feature_df_schema:
+                cls.fit = infer_feature_df_schema_from_fit(methods_with_features_as_input)(cls.fit)
+            if infer_target_df_schema:
+                cls.fit = infer_target_df_schema_from_fit(cls.fit)
 
             # Modify methods where input and output should be validated.
             if validate_input_output_method_list is not None:

@@ -69,8 +69,8 @@ from mlmodels import (
 
 # Create data frame model class where the feature and target schema are inferred when the model is fitted.
 @infer_from_fit(
-    feature_df_schema=True,
-    target_df_schema=True,
+    infer_feature_df_schema=True,
+    infer_target_df_schema=True,
     methods_with_features_as_input=['predict'],
     validate_input_output_method_list=['predict']
 )
